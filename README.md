@@ -15,7 +15,7 @@ Delivered **module by module** — each module boots and typechecks on its own.
 
 - [x] **Module 1 — Foundation:** config, Tailwind 4 design tokens, theme provider, Zod-validated env, CSP & security headers, lint/format/commit tooling.
 - [x] **Module 3 — HTTP + MSW spine:** client Axios + BFF proxy (`/api/[...proxy]`), server-fetch, TanStack Query, MSW mock server, `/status` demo. _(Module 2 i18n skipped — single-language app.)_
-- [ ] Module 4 — Auth (JWT in httpOnly cookies, single-flight refresh, login)
+- [x] **Module 4 — Auth:** JWT in httpOnly cookies, single-flight refresh, middleware, RHF+Zod login, protected `/account`. Demo login: `admin@docs-hub.local` / `Password123!`.
 - [ ] Module 5 — RBAC (`hasPermission`, `<Can>`, `requirePermission`)
 - [ ] Module 6 — Documents read slice
 - [ ] Module 7 — Documents write + `@modal` intercepting preview + charts

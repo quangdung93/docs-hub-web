@@ -92,7 +92,9 @@ Delivered incrementally; each module boots + typechecks on its own. See
 - [~] Module 2 — i18n shell — **skipped** (product decision: single language, no next-intl).
 - [x] **Module 3 — HTTP + MSW spine:** client Axios (`shared/api`), `serverFetch` (`core/api`),
       BFF proxy `/api/[...proxy]` (+ CSRF guard), QueryProvider, MSW × 3 runtimes, `/status` demo.
-- [ ] Module 4 — Auth (JWT cookie, single-flight refresh, login)
+- [x] **Module 4 — Auth:** JWT in httpOnly cookies, `core/auth` (jose sign/verify, `getSession`,
+      single-flight refresh), `/api/auth/{login,logout,refresh}`, middleware silent refresh,
+      `features/auth` (RHF+Zod login), protected `/account`, seeded MSW users.
 - [ ] Module 5 — RBAC (`hasPermission`, `<Can>`, `requirePermission`)
 - [ ] Module 6 — Documents read slice
 - [ ] Module 7 — Documents write + `@modal` intercepting preview + charts

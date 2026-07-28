@@ -1,3 +1,5 @@
+import './load-env';
+
 import { createMiddleware } from '@mswjs/http-middleware';
 import express from 'express';
 
