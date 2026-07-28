@@ -16,7 +16,8 @@ repo** — it deliberately does **not** follow the `am-project` ISC/GitLab conve
 - **Tailwind CSS 4** (CSS-first — there is **no** `tailwind.config.js`) · **shadcn/ui** · Radix · Lucide
 - **Zustand** (ephemeral UI state only) · **TanStack Query** (server state)
 - **React Hook Form** + **Zod** (Zod is the single source of truth for types & validation)
-- **Axios** (client-only transport) · **next-intl** (i18n) · **Recharts** · dayjs · lodash-es
+- **Axios** (client-only transport) · **Recharts** · dayjs · lodash-es
+  - i18n (next-intl) is **out of scope** — the app is single-language (English).
 - Testing: **Jest** + RTL + **Playwright** + **MSW**
 - Node **≥ 20** (see `.nvmrc` → 22). Package manager: **npm**.
 
@@ -66,7 +67,8 @@ slice before adding a new one.
   Dark mode is class-based via `next-themes`; support both themes.
 - **Commits:** Conventional Commits, enforced by commitlint — `type(scope): subject`
   (e.g. `feat(documents): add upload progress`). scope is kebab-case.
-- **i18n:** no hardcoded UI strings — all copy goes through next-intl `messages/{en,vi}.json`.
+- **i18n:** out of scope (single-language English). If it's ever needed, add next-intl
+  as its own module; don't scatter locale logic before then.
 
 ## Commands
 
@@ -87,8 +89,9 @@ Delivered incrementally; each module boots + typechecks on its own. See
 `docs/folder-structure.md` for what each planned directory will hold.
 
 - [x] **Module 1 — Foundation:** config, Tailwind 4 tokens, theme provider, `env.ts`, CSP.
-- [ ] Module 2 — i18n shell (`[locale]` routing, middleware, messages)
-- [ ] Module 3 — HTTP + MSW spine (Axios client, BFF proxy, QueryProvider, mocks)
+- [~] Module 2 — i18n shell — **skipped** (product decision: single language, no next-intl).
+- [x] **Module 3 — HTTP + MSW spine:** client Axios (`shared/api`), `serverFetch` (`core/api`),
+      BFF proxy `/api/[...proxy]` (+ CSRF guard), QueryProvider, MSW × 3 runtimes, `/status` demo.
 - [ ] Module 4 — Auth (JWT cookie, single-flight refresh, login)
 - [ ] Module 5 — RBAC (`hasPermission`, `<Can>`, `requirePermission`)
 - [ ] Module 6 — Documents read slice

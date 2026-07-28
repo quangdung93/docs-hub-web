@@ -5,7 +5,7 @@ Built on Next.js 16 App Router with a feature-based clean architecture, designed
 foundation a 20+ engineer team can extend safely.
 
 **Stack:** Next.js 16 · React 19 · TypeScript (strict) · Tailwind CSS 4 (CSS-first) ·
-shadcn/ui · Radix · TanStack Query · Zustand · React Hook Form + Zod · next-intl · MSW
+shadcn/ui · Radix · TanStack Query · Zustand · React Hook Form + Zod · MSW
 
 ---
 
@@ -14,8 +14,7 @@ shadcn/ui · Radix · TanStack Query · Zustand · React Hook Form + Zod · next
 Delivered **module by module** — each module boots and typechecks on its own.
 
 - [x] **Module 1 — Foundation:** config, Tailwind 4 design tokens, theme provider, Zod-validated env, CSP & security headers, lint/format/commit tooling.
-- [ ] Module 2 — i18n shell (`[locale]` routing, middleware, `messages/{en,vi}.json`)
-- [ ] Module 3 — HTTP + MSW spine (Axios client, BFF proxy, TanStack Query, mocks)
+- [x] **Module 3 — HTTP + MSW spine:** client Axios + BFF proxy (`/api/[...proxy]`), server-fetch, TanStack Query, MSW mock server, `/status` demo. _(Module 2 i18n skipped — single-language app.)_
 - [ ] Module 4 — Auth (JWT in httpOnly cookies, single-flight refresh, login)
 - [ ] Module 5 — RBAC (`hasPermission`, `<Can>`, `requirePermission`)
 - [ ] Module 6 — Documents read slice
@@ -43,11 +42,15 @@ cp .env.example .env.local
 # 4. Enable git hooks (husky) — only needed once, after cloning
 npm run prepare
 
-# 5. Start the dev server
+# 5. Start the dev server + mock API together (recommended)
+npm run dev:mock      # Next on :3000  +  MSW mock backend on :4000
+
+# …or just the app (data calls will fail until a backend is on API_URL)
 npm run dev
 ```
 
-Open **http://localhost:3000**.
+Open **http://localhost:3000**. Visit **/status** to see the API transport spine
+(both the server and client paths) hitting the mock backend.
 
 > **Gotcha:** if `npm run build` fails with `Cannot find module './tailwindcss-oxide.*.node'`,
 > you installed under the wrong Node version. Run `nvm use` and reinstall.
@@ -105,7 +108,7 @@ Contributor context: [`CLAUDE.md`](./CLAUDE.md)
 - **Naming:** files `kebab-case`; React components `PascalCase`; hooks `useXxx`; Zod schemas `XxxSchema` with inferred type `Xxx`.
 - **Styling:** compose classes with `cn()` from `@/shared/lib/utils`; use semantic design tokens (`bg-background`, `--color-status-*`), not raw hex. Dark mode is class-based via `next-themes`.
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/), enforced by commitlint — `type(scope): subject` (e.g. `feat(documents): add upload progress`). Scope is kebab-case.
-- **i18n:** no hardcoded UI strings — all copy goes through next-intl `messages/{en,vi}.json`.
+- **i18n:** out of scope — the app is single-language (English).
 
 ---
 
