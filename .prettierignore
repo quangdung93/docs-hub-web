@@ -1,0 +1,9 @@
+.next
+node_modules
+build-artifact
+coverage
+pnpm-lock.yaml
+package-lock.json
+next-env.d.ts
+*.md
+messages
