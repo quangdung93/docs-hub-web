@@ -1,4 +1,4 @@
-# CLAUDE.md — document-hub-web
+# CLAUDE.md — docs-hub-web
 
 Context for Claude Code sessions working in this repository. Read this first, then
 `docs/folder-structure.md` for the directory-by-directory reference.

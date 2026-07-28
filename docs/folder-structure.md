@@ -1,6 +1,6 @@
 # Folder Structure
 
-Directory-by-directory reference for `document-hub-web`. The architecture is
+Directory-by-directory reference for `docs-hub-web`. The architecture is
 **Feature-based Clean Architecture**: four top-level layers under `src/`, with
 dependencies always pointing **inward** (`features → shared → core`; `app` wires
 them together). Nothing in `core/` or `shared/` may import from `features/`.
@@ -10,7 +10,7 @@ them together). Nothing in `core/` or `shared/` may import from `features/`.
 ## Top level
 
 ```
-document-hub-web/
+docs-hub-web/
 ├── src/                    Application source (see below)
 ├── docs/                   Project documentation (this file, conventions, diagrams)
 ├── messages/       [planned] next-intl translation catalogs (en.json, vi.json)
