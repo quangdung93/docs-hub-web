@@ -31,6 +31,28 @@ export const ApiFailureSchema = z.object({
   meta: ApiMetaSchema,
 });
 
+/**
+ * Build the success envelope from a route handler. `meta` is REQUIRED by
+ * `apiSuccessSchema`, so a handler that hand-rolls `{ success, data }` produces a
+ * body its own client cannot parse — use this instead of an object literal.
+ */
+export function successEnvelope<T>(data: T) {
+  return {
+    success: true as const,
+    data,
+    meta: { requestId: crypto.randomUUID(), timestamp: new Date().toISOString() },
+  };
+}
+
+/** Failure counterpart of `successEnvelope`, for route handlers. */
+export function failureEnvelope(code: string, message: string) {
+  return {
+    success: false as const,
+    error: { code, message },
+    meta: { requestId: crypto.randomUUID(), timestamp: new Date().toISOString() },
+  };
+}
+
 export type ApiMeta = z.infer<typeof ApiMetaSchema>;
 export type ApiErrorBody = z.infer<typeof ApiErrorBodySchema>;
 

@@ -12,8 +12,15 @@ import { AppError, ApiFailureSchema, ERROR_CODE } from '@/core/api/errors';
  * (middleware + proxy, Module 4). A 401 that reaches the client means the session
  * is truly dead → hand off to the login page.
  */
+/**
+ * When the app is mounted under a sub-path (see `basePath` in next.config.ts),
+ * Next rewrites its route handlers to live under that prefix too — so the client
+ * must call `${basePath}/api`, not `/api`. Inlined at build time by Next.
+ */
+const apiBaseUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api`;
+
 export const http: AxiosInstance = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseUrl,
   timeout: 30_000,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
