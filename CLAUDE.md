@@ -17,7 +17,8 @@ repo** — it deliberately does **not** follow the `am-project` ISC/GitLab conve
 - **Zustand** (ephemeral UI state only) · **TanStack Query** (server state)
 - **React Hook Form** + **Zod** (Zod is the single source of truth for types & validation)
 - **Axios** (client-only transport) · **Recharts** · dayjs · lodash-es
-  - i18n (next-intl) is **out of scope** — the app is single-language (English).
+  - i18n: **in scope** — VI/EN via a hand-rolled dictionary in `core/i18n` (no next-intl).
+    UI copy is Vietnamese-first (it mirrors the product mockup); code stays English.
 - Testing: **Jest** + RTL + **Playwright** + **MSW**
 - Node **≥ 20** (see `.nvmrc` → 22). Package manager: **npm**.
 
