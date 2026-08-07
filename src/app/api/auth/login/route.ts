@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
+import { failureEnvelope, successEnvelope } from '@/core/api/errors';
+
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
@@ -19,10 +21,9 @@ import { LoginInputSchema } from '@/features/auth/schemas/login.schema';
 export async function POST(req: NextRequest) {
   const input = LoginInputSchema.safeParse(await req.json().catch(() => null));
   if (!input.success) {
-    return NextResponse.json(
-      { success: false, error: { code: 'ERR_VALIDATION', message: 'Invalid credentials payload' } },
-      { status: 400 }
-    );
+    return NextResponse.json(failureEnvelope('ERR_VALIDATION', 'Invalid credentials payload'), {
+      status: 400,
+    });
   }
 
   const upstream = await fetch(`${serverEnv.API_URL}/auth/login`, {
@@ -33,15 +34,14 @@ export async function POST(req: NextRequest) {
   }).catch(() => null);
 
   if (!upstream) {
-    return NextResponse.json(
-      { success: false, error: { code: 'ERR_UPSTREAM', message: 'Auth service unreachable' } },
-      { status: 502 }
-    );
+    return NextResponse.json(failureEnvelope('ERR_UPSTREAM', 'Auth service unreachable'), {
+      status: 502,
+    });
   }
 
   const body: unknown = await upstream.json().catch(() => null);
   if (!upstream.ok) {
-    return NextResponse.json(body ?? { success: false, error: { code: 'ERR_AUTH' } }, {
+    return NextResponse.json(body ?? failureEnvelope('ERR_AUTH', 'Authentication failed'), {
       status: upstream.status,
     });
   }
@@ -49,10 +49,9 @@ export async function POST(req: NextRequest) {
   const data = body && typeof body === 'object' && 'data' in body ? body.data : body;
   const parsed = AuthResultSchema.safeParse(data);
   if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, error: { code: 'ERR_CONTRACT', message: 'Malformed auth response' } },
-      { status: 502 }
-    );
+    return NextResponse.json(failureEnvelope('ERR_CONTRACT', 'Malformed auth response'), {
+      status: 502,
+    });
   }
 
   const { user, accessToken, refreshToken } = parsed.data;
@@ -60,5 +59,5 @@ export async function POST(req: NextRequest) {
   jar.set(ACCESS_COOKIE, accessToken, accessCookieOptions());
   jar.set(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
 
-  return NextResponse.json({ success: true, data: { user } });
+  return NextResponse.json(successEnvelope({ user }));
 }

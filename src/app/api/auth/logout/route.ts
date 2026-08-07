@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+import { successEnvelope } from '@/core/api/errors';
+
 import { ACCESS_COOKIE, REFRESH_COOKIE, clearCookieOptions } from '@/core/auth/cookies';
 import { serverEnv } from '@/core/config/env';
 
@@ -25,5 +27,5 @@ export async function POST() {
   jar.set(ACCESS_COOKIE, '', clearCookieOptions());
   jar.set(REFRESH_COOKIE, '', clearCookieOptions());
 
-  return NextResponse.json({ success: true, data: { ok: true } });
+  return NextResponse.json(successEnvelope({ ok: true }));
 }

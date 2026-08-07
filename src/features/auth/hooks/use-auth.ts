@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
 import { authApi } from '../api/auth.api';
+import { authRoutes } from '../routes';
 
 /**
  * Login mutation. On success we `router.refresh()` so server components re-read the
@@ -14,7 +15,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: authApi.login,
     onSuccess: () => {
-      router.replace('/account');
+      router.replace(authRoutes.projects);
       router.refresh();
     },
   });
@@ -28,7 +29,7 @@ export function useLogout() {
     mutationFn: authApi.logout,
     onSuccess: () => {
       queryClient.clear();
-      router.replace('/login');
+      router.replace(authRoutes.login);
       router.refresh();
     },
   });
