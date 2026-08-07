@@ -33,7 +33,7 @@ export function ProjectGrid() {
     : (projects ?? []);
 
   return (
-    <main className="flex-1 p-6">
+    <main className="flex-1 p-6 lg:p-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">{t('projects.title')}</h1>
@@ -56,9 +56,9 @@ export function ProjectGrid() {
       />
 
       {isPending && (
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {Array.from({ length: 3 }, (_, index) => (
-            <Skeleton key={index} className="h-[152px] rounded-xl" />
+            <Skeleton key={index} className="h-[168px] rounded-xl" />
           ))}
         </div>
       )}
@@ -84,14 +84,14 @@ export function ProjectGrid() {
       )}
 
       {!isPending && !isError && visible.length > 0 && (
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {visible.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
 
           <Link
             href={projectRoutes.create}
-            className="border-input text-muted-foreground hover:border-brand/50 hover:text-brand focus-visible:ring-ring/40 grid min-h-[152px] place-items-center rounded-xl border border-dashed p-4 transition focus-visible:ring-2 focus-visible:outline-none"
+            className="border-input text-muted-foreground hover:border-brand/50 hover:text-brand focus-visible:ring-ring/40 grid min-h-[168px] place-items-center rounded-xl border border-dashed p-5 transition focus-visible:ring-2 focus-visible:outline-none"
           >
             <span className="text-center">
               <Plus className="mx-auto size-6" aria-hidden />

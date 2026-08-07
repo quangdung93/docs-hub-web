@@ -23,7 +23,6 @@ export const en: Record<MessageKey, string> = {
   'common.theme': 'Theme',
   'common.theme.light': 'Light',
   'common.theme.dark': 'Dark',
-  'common.theme.system': 'System',
 
   'login.title': 'Sign in',
   'login.subtitle': 'Enter the account you were issued to continue.',
@@ -41,6 +40,14 @@ export const en: Record<MessageKey, string> = {
   'login.error.usernameRequired': 'Username is required',
   'login.error.passwordRequired': 'Password is required',
   'login.error.failed': 'Sign-in failed. Please try again.',
+
+  'userMenu.profile': 'Profile',
+  'userMenu.logout': 'Sign out',
+  'userMenu.comingSoon': 'This feature is under development.',
+  'userMenu.logoutConfirmTitle': 'Are you sure you want to sign out?',
+  'userMenu.logoutConfirmDescription': 'You will need to sign in again to continue.',
+  'userMenu.logoutStay': 'Stay',
+  'userMenu.logoutConfirm': 'Sign out',
 
   'projects.title': 'Pick a project to search, or add a new one',
   'projects.subtitle': 'Each project is its own document workspace.',

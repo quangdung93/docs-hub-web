@@ -60,7 +60,7 @@ export function CreateProjectWizard() {
 
   return (
     <>
-      <Card className="mx-auto max-w-2xl">
+      <Card className="mx-auto w-full max-w-3xl">
         <ScreenHeader title={t('createProject.title')} backHref={projectRoutes.list} />
 
         <div className="px-6 pt-5">
@@ -71,10 +71,10 @@ export function CreateProjectWizard() {
           <form onSubmit={onSubmitStep1} noValidate>
             <CardBody>
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-                <label className="group border-input bg-surface-muted/60 hover:border-brand/60 hover:bg-brand-subtle/40 grid size-24 shrink-0 cursor-pointer place-items-center rounded-xl border-2 border-dashed text-center transition">
+                <label className="group border-input bg-surface-muted/60 hover:border-brand/60 hover:bg-brand-subtle/40 grid size-28 shrink-0 cursor-pointer place-items-center rounded-xl border-2 border-dashed text-center transition">
                   <div>
                     <ImagePlus
-                      className="text-muted-foreground group-hover:text-brand mx-auto size-5"
+                      className="text-muted-foreground group-hover:text-brand mx-auto size-6"
                       aria-hidden
                     />
                     <p className="text-muted-foreground mt-1 px-1 text-[11px] leading-tight">
@@ -106,7 +106,7 @@ export function CreateProjectWizard() {
                   <Field label={t('createProject.description')} htmlFor="project-description">
                     <Textarea
                       id="project-description"
-                      rows={2}
+                      rows={3}
                       placeholder={t('createProject.descriptionPlaceholder')}
                       {...register('description')}
                     />

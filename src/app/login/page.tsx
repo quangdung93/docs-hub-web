@@ -15,7 +15,7 @@ export default async function LoginPage() {
   if (await getSession()) redirect(authRoutes.projects);
 
   return (
-    <div className="mx-auto max-w-[1240px] p-4">
+    <div className="mx-auto flex min-h-screen max-w-5xl items-center p-4">
       <div className="border-border bg-surface grid min-h-[560px] overflow-hidden rounded-2xl border shadow-sm md:grid-cols-2">
         <LoginHero />
         <LoginPanel>

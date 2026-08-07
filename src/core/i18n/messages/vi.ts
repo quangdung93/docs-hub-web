@@ -24,7 +24,6 @@ export const vi = {
   'common.theme': 'Giao diện',
   'common.theme.light': 'Sáng',
   'common.theme.dark': 'Tối',
-  'common.theme.system': 'Hệ thống',
 
   'login.title': 'Đăng nhập',
   'login.subtitle': 'Nhập tài khoản được cấp để tiếp tục.',
@@ -42,6 +41,14 @@ export const vi = {
   'login.error.usernameRequired': 'Vui lòng nhập tên đăng nhập',
   'login.error.passwordRequired': 'Vui lòng nhập mật khẩu',
   'login.error.failed': 'Đăng nhập thất bại. Vui lòng thử lại.',
+
+  'userMenu.profile': 'Thông tin cá nhân',
+  'userMenu.logout': 'Đăng xuất',
+  'userMenu.comingSoon': 'Chức năng đang phát triển',
+  'userMenu.logoutConfirmTitle': 'Bạn có chắc chắn muốn đăng xuất?',
+  'userMenu.logoutConfirmDescription': 'Bạn sẽ cần đăng nhập lại để tiếp tục.',
+  'userMenu.logoutStay': 'Ở lại',
+  'userMenu.logoutConfirm': 'Đăng xuất',
 
   'projects.title': 'Chọn dự án bạn muốn tra cứu hoặc thêm dự án mới',
   'projects.subtitle': 'Mỗi dự án là một không gian tài liệu riêng.',

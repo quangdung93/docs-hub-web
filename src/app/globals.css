@@ -189,6 +189,20 @@
 
   body {
     background-color: var(--color-canvas);
+    /* Soft brand-tinted gradient wash — subtle depth behind the UI, never
+       competing with it. Fixed so it stays put while content scrolls. */
+    background-image:
+      radial-gradient(
+        60rem 60rem at 15% -10%,
+        color-mix(in oklab, var(--color-brand) 12%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        50rem 50rem at 100% 110%,
+        color-mix(in oklab, var(--color-brand) 9%, transparent),
+        transparent 55%
+      );
+    background-attachment: fixed;
     color: var(--color-foreground);
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
