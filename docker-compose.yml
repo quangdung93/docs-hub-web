@@ -1,0 +1,59 @@
+# Service names are deliberately unique (not `app` / `mock`): this stack joins
+# the shared `mobix-landing_default` network, where Docker publishes each service
+# name as a DNS alias. A service called `app` here would make `app` resolve to
+# BOTH this container and the landing app's, and the shared nginx would
+# round-robin between them — serving 404s on half the requests to mobix.asia.
+services:
+  docshub-web:
+    build:
+      context: .
+      args:
+        # Baked into the client bundle at build time — must match the nginx
+        # location prefix on mobix.asia.
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/docshub_su5}
+    container_name: docs-hub-web
+    restart: unless-stopped
+    # No host port. The shared nginx reaches this container by name over the
+    # `edge` network, so nothing is exposed to the internet directly.
+    expose:
+      - "3000"
+    networks:
+      - default
+      - edge
+    environment:
+      - NODE_ENV=production
+      - APP_ENV=production
+      - NEXT_PUBLIC_APP_ENV=production
+      - NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH:-/docshub_su5}
+      # Demo deployment: the API is the MSW mock service below. To move to a real
+      # backend, point API_URL at it and drop the mock service — no code change.
+      - ENABLE_MOCKS=false
+      - API_URL=http://docshub-mock:4000
+      # Shared with the mock so JWTs signed there verify here. Supplied by the
+      # .env file beside this compose file; never committed, never baked in.
+      - AUTH_SECRET=${AUTH_SECRET:?AUTH_SECRET is required}
+    depends_on:
+      - docshub-mock
+
+  docshub-mock:
+    build:
+      context: .
+      dockerfile: Dockerfile.mock
+    container_name: docs-hub-mock
+    restart: unless-stopped
+    # Internal-only: on the default network, never on `edge`, never published.
+    expose:
+      - "4000"
+    networks:
+      - default
+    environment:
+      - NODE_ENV=production
+      - MOCK_PORT=4000
+      - AUTH_SECRET=${AUTH_SECRET:?AUTH_SECRET is required}
+
+networks:
+  # The existing mobix-landing nginx network. Joining it (rather than publishing
+  # a host port) lets that nginx proxy to `docs-hub-web:3000` by name.
+  edge:
+    name: mobix-landing_default
+    external: true

@@ -1,0 +1,17 @@
+# Keep the build context small and prevent local secrets/artifacts reaching the image.
+node_modules
+.next
+.git
+.husky
+npm-debug.log*
+*.log
+
+# Local env files — real values are injected at runtime via compose, never baked in.
+.env
+.env.local
+.env.*.local
+
+.DS_Store
+docs
+README.md
+CLAUDE.md
