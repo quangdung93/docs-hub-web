@@ -1,6 +1,6 @@
 'use client';
 
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Moon, Sun, SunMoon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
@@ -9,13 +9,13 @@ import { cn } from '@/shared/lib/utils';
 
 const OPTIONS = [
   { value: 'light', labelKey: 'common.theme.light', icon: Sun },
-  { value: 'system', labelKey: 'common.theme.system', icon: Monitor },
   { value: 'dark', labelKey: 'common.theme.dark', icon: Moon },
 ] as const satisfies ReadonlyArray<{ value: string; labelKey: MessageKey; icon: unknown }>;
 
 /**
- * Segmented light/system/dark switch. Renders a stable placeholder until mounted
- * to avoid a hydration mismatch (server has no knowledge of the resolved theme).
+ * Segmented light/dark switch, mirroring `LanguageToggle`: a leading function icon
+ * then the two options. Renders a stable placeholder until mounted to avoid a
+ * hydration mismatch (server has no knowledge of the resolved theme).
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
@@ -37,6 +37,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         className
       )}
     >
+      <SunMoon className="text-muted-foreground mx-1.5 size-3.5" aria-hidden />
       {OPTIONS.map(({ value, labelKey, icon: Icon }) => {
         const active = mounted && theme === value;
         return (
