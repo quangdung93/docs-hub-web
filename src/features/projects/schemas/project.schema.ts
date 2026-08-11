@@ -7,17 +7,26 @@ import { z } from 'zod';
  */
 export const ProjectStatusSchema = z.enum(['active', 'archived']);
 
+/**
+ * Domain model for a project.
+ *
+ * Several fields are nullable because docs-hub-api does not provide them yet:
+ * the counters and `ownerName` are not on ProjectResponse. Null means "unknown",
+ * and the UI renders a placeholder rather than a misleading zero — do NOT
+ * default these to 0/'' in the mapper.
+ */
 export const ProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
   status: ProjectStatusSchema,
-  imageUrl: z.string().nullable().default(null),
-  documentCount: z.number().int().nonnegative(),
-  memberCount: z.number().int().nonnegative(),
-  chunkCount: z.number().int().nonnegative(),
-  ownerName: z.string(),
-  createdAt: z.iso.datetime(),
+  imageUrl: z.string().nullable(),
+  ownerId: z.string(),
+  ownerName: z.string().nullable(),
+  documentCount: z.number().int().nonnegative().nullable(),
+  memberCount: z.number().int().nonnegative().nullable(),
+  chunkCount: z.number().int().nonnegative().nullable(),
+  createdAt: z.string(),
 });
 
 export const ProjectListSchema = z.array(ProjectSchema);
@@ -40,27 +49,32 @@ export const UpdateProjectInputSchema = CreateProjectInputSchema.extend({
 
 export const MemberRoleSchema = z.enum(['owner', 'editor', 'viewer', 'pending']);
 
+/** `name`/`jobTitle` are null until the backend joins user identity into the
+ *  member list (today it returns `user_id` only). */
 export const ProjectMemberSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  jobTitle: z.string(),
+  userId: z.string(),
+  name: z.string().nullable(),
+  jobTitle: z.string().nullable(),
   role: MemberRoleSchema,
-  joinedAt: z.iso.datetime().nullable(),
+  joinedAt: z.string().nullable(),
 });
 
 export const ProjectMemberListSchema = z.array(ProjectMemberSchema);
 
 /** Per-project RAG + security configuration (the "Cấu hình" tab). */
+/** Nullable fields are ones docs-hub-api does not expose yet; the settings panel
+ *  marks them unavailable rather than showing an editable fake value. */
 export const ProjectSettingsSchema = z.object({
-  completionModel: z.string(),
-  embeddingModel: z.string(),
-  topK: z.number().int().positive(),
-  chunkSize: z.number().int().positive(),
-  chunkOverlap: z.number().int().nonnegative(),
-  allowedFormats: z.array(z.string()),
-  auditLog: z.boolean(),
-  membersOnly: z.boolean(),
-  allowExport: z.boolean(),
+  completionModel: z.string().nullable(),
+  topK: z.number().int().positive().nullable(),
+  chunkSize: z.number().int().positive().nullable(),
+  allowedFormats: z.array(z.string()).nullable(),
+  embeddingModel: z.string().nullable(),
+  chunkOverlap: z.number().int().nonnegative().nullable(),
+  auditLog: z.boolean().nullable(),
+  membersOnly: z.boolean().nullable(),
+  allowExport: z.boolean().nullable(),
 });
 
 export type Project = z.infer<typeof ProjectSchema>;

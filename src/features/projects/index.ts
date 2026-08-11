@@ -15,7 +15,6 @@ export {
   useProjects,
   useProjectSettings,
   useUpdateProject,
-  useUpdateProjectSettings,
 } from './hooks/use-projects';
 export { projectRoutes } from './routes';
 export {

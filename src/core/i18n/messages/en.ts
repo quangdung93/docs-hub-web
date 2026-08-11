@@ -93,6 +93,7 @@ export const en: Record<MessageKey, string> = {
     'Deleting a project removes every document and its entire Q&A history. This cannot be undone.',
   'projectAdmin.danger.delete': 'Delete project',
   'projectAdmin.danger.confirmTitle': 'Delete “{name}”?',
+  'projectAdmin.danger.confirmNameLabel': 'Type the project name to confirm',
   'projectAdmin.danger.confirmDescription':
     'Every document, index and Q&A record in this project will be permanently deleted. This cannot be undone.',
   'projectAdmin.footnote': 'Use the General · Members · Configuration tabs to switch sections.',
@@ -112,6 +113,7 @@ export const en: Record<MessageKey, string> = {
   'members.permission.askOnly': 'Ask only',
   'members.invited': 'Invited',
   'members.empty': 'No members yet.',
+  'members.unknownIdentity': 'User details unavailable',
 
   'settings.model.title': 'Inference models',
   'settings.model.completion': 'Answer generation model',
@@ -123,6 +125,8 @@ export const en: Record<MessageKey, string> = {
   'settings.processing.formats': 'Allowed formats',
   'settings.processing.tokens': '{count} tokens',
   'settings.security.title': 'Security & audit',
+  'settings.unavailable': 'Not available',
+  'settings.unavailableHint': 'The server does not expose this setting yet.',
   'settings.security.auditLog': 'Write an audit log for document access',
   'settings.security.membersOnly': 'Restrict access to project members',
   'settings.security.allowExport': 'Allow exporting answers to Word / Markdown',

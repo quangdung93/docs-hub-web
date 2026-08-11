@@ -58,13 +58,17 @@ export function MemberTable({ projectId }: { projectId: string }) {
   const { data: members, isPending } = useProjectMembers(projectId);
   const [search, setSearch] = useState('');
 
+  // The API returns `user_id` only — no name, email or job title — so search
+  // falls back to the id until the backend joins user identity into this list.
   const query = search.trim().toLowerCase();
-  const visible = (members ?? []).filter(
-    (member) =>
-      !query ||
-      member.name.toLowerCase().includes(query) ||
-      member.jobTitle.toLowerCase().includes(query)
-  );
+  const visible = (members ?? []).filter((member) => {
+    if (!query) return true;
+    const haystack = [member.name, member.jobTitle, member.userId]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(query);
+  });
 
   return (
     <>
@@ -114,10 +118,14 @@ export function MemberTable({ projectId }: { projectId: string }) {
                 <TableRow key={member.id}>
                   <TableCell>
                     <div className="flex items-center gap-2.5">
-                      <Avatar name={member.name} />
+                      <Avatar name={member.name ?? member.userId} />
                       <div>
-                        <div className="font-medium">{member.name}</div>
-                        <div className="text-muted-foreground text-xs">{member.jobTitle}</div>
+                        <div className="font-medium">
+                          {member.name ?? `#${member.userId.slice(0, 8)}`}
+                        </div>
+                        <div className="text-muted-foreground text-xs">
+                          {member.jobTitle ?? t('members.unknownIdentity')}
+                        </div>
                       </div>
                     </div>
                   </TableCell>

@@ -27,3 +27,12 @@ export function formatRelativeTime(isoDate: string, locale: Locale, now = Date.n
 export function formatDate(isoDate: string, locale: Locale): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'short' }).format(new Date(isoDate));
 }
+
+/**
+ * Render a value the backend has not provided yet. Several fields (project
+ * counters, member names) are absent from the current API, and showing 0 or an
+ * empty string would read as real data — an em dash reads as "unknown".
+ */
+export function orUnknown(value: string | number | null | undefined): string {
+  return value === null || value === undefined ? '—' : String(value);
+}

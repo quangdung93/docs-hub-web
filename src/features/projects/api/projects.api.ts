@@ -1,64 +1,138 @@
-import { apiSuccessSchema, endpoints } from '@/core/api';
+import { endpoints, unwrap, unwrapPaginated, type Paginated } from '@/core/api';
 import { http } from '@/shared/api/http';
 
-import {
-  type CreateProjectInput,
-  type Project,
-  ProjectListSchema,
-  ProjectMemberListSchema,
-  ProjectSchema,
-  ProjectSettingsSchema,
-  type ProjectMember,
-  type ProjectSettings,
-  type UpdateProjectInput,
+import { toProject, toProjectMember, toProjectSettings } from '../services/project.mapper';
+import type {
+  CreateProjectInput,
+  Project,
+  ProjectMember,
+  ProjectSettings,
+  UpdateProjectInput,
 } from '../schemas/project.schema';
 
+import { AvatarUploadUrlDtoSchema, ProjectDtoSchema, ProjectMemberDtoSchema } from './project.dto';
+
 /**
- * Projects transport. Every method parses the response envelope against the Zod
- * schema, so a contract drift surfaces here rather than as `undefined` deep in a
- * component. Paths come from the central `endpoints` registry — when the real API
- * lands, only that file changes.
+ * Projects transport for docs-hub-api.
+ *
+ * Every call goes through `unwrap`, which is what catches the backend's
+ * business failures — those arrive as HTTP 200 with `success:false`, so reading
+ * `response.data` directly would treat a failed delete as a success.
  */
 export const projectsApi = {
-  list: async (search?: string, signal?: AbortSignal): Promise<Project[]> => {
-    const { data } = await http.get(endpoints.projects.list, {
-      params: search ? { search } : undefined,
-      signal,
-    });
-    return apiSuccessSchema(ProjectListSchema).parse(data).data;
+  list: async (
+    params?: { page?: number; limit?: number },
+    signal?: AbortSignal
+  ): Promise<Paginated<Project>> => {
+    const { data } = await http.get(endpoints.projects.list, { params, signal });
+    const { items, pagination } = unwrapPaginated(data, ProjectDtoSchema);
+    return { items: items.map(toProject), pagination };
   },
 
-  detail: async (projectId: string, signal?: AbortSignal): Promise<Project> => {
-    const { data } = await http.get(endpoints.projects.detail(projectId), { signal });
-    return apiSuccessSchema(ProjectSchema).parse(data).data;
+  /**
+   * There is no `GET /projects/{id}` in the API. Until one exists, the detail
+   * screens resolve a project by scanning the list — correct but O(pages), so
+   * replace this the moment the endpoint lands.
+   */
+  detail: async (projectId: string, signal?: AbortSignal): Promise<Project | undefined> => {
+    const { items } = await projectsApi.list({ limit: 100 }, signal);
+    return items.find((project) => project.id === projectId);
   },
 
   create: async (input: CreateProjectInput): Promise<Project> => {
-    const { data } = await http.post(endpoints.projects.create, input);
-    return apiSuccessSchema(ProjectSchema).parse(data).data;
+    const { data } = await http.post(endpoints.projects.create, {
+      name: input.name,
+      description: input.description,
+    });
+    return toProject(unwrap(data, ProjectDtoSchema));
   },
 
-  update: async (projectId: string, input: UpdateProjectInput): Promise<Project> => {
-    const { data } = await http.patch(endpoints.projects.update(projectId), input);
-    return apiSuccessSchema(ProjectSchema).parse(data).data;
+  update: async (projectId: string, input: Partial<UpdateProjectInput>): Promise<Project> => {
+    const { data } = await http.patch(endpoints.projects.update(projectId), {
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
+    });
+    return toProject(unwrap(data, ProjectDtoSchema));
   },
 
-  remove: async (projectId: string): Promise<void> => {
-    await http.delete(endpoints.projects.remove(projectId));
+  /**
+   * Deletion requires the user to retype the project name; a mismatch comes back
+   * as the business error CONFIRM_NAME_MISMATCH (HTTP 200), not a 4xx.
+   * Returns 204 with no body, so there is nothing to unwrap.
+   */
+  remove: async (projectId: string, confirmName: string): Promise<void> => {
+    await http.delete(endpoints.projects.remove(projectId), {
+      data: { confirm_name: confirmName },
+    });
   },
 
   members: async (projectId: string, signal?: AbortSignal): Promise<ProjectMember[]> => {
     const { data } = await http.get(endpoints.projects.members(projectId), { signal });
-    return apiSuccessSchema(ProjectMemberListSchema).parse(data).data;
+    const { items } = unwrapPaginated(data, ProjectMemberDtoSchema);
+    return items.map(toProjectMember);
   },
 
-  settings: async (projectId: string, signal?: AbortSignal): Promise<ProjectSettings> => {
-    const { data } = await http.get(endpoints.projects.settings(projectId), { signal });
-    return apiSuccessSchema(ProjectSettingsSchema).parse(data).data;
+  inviteMember: async (
+    projectId: string,
+    input: { userId: string; role: 'editor' | 'viewer' }
+  ): Promise<ProjectMember> => {
+    const { data } = await http.post(endpoints.projects.members(projectId), {
+      user_id: input.userId,
+      role: input.role,
+    });
+    return toProjectMember(unwrap(data, ProjectMemberDtoSchema));
   },
 
-  updateSettings: async (projectId: string, input: ProjectSettings): Promise<ProjectSettings> => {
-    const { data } = await http.put(endpoints.projects.settings(projectId), input);
-    return apiSuccessSchema(ProjectSettingsSchema).parse(data).data;
+  changeMemberRole: async (
+    projectId: string,
+    userId: string,
+    role: 'editor' | 'viewer'
+  ): Promise<ProjectMember> => {
+    const { data } = await http.patch(endpoints.projects.member(projectId, userId), { role });
+    return toProjectMember(unwrap(data, ProjectMemberDtoSchema));
+  },
+
+  removeMember: async (projectId: string, userId: string): Promise<void> => {
+    await http.delete(endpoints.projects.member(projectId, userId));
+  },
+
+  /** Settings are embedded in ProjectResponse; there is no dedicated endpoint. */
+  settings: async (projectId: string, signal?: AbortSignal): Promise<ProjectSettings | null> => {
+    const { data } = await http.get(endpoints.projects.list, {
+      params: { limit: 100 },
+      signal,
+    });
+    const { items } = unwrapPaginated(data, ProjectDtoSchema);
+    const dto = items.find((project) => project.id === projectId);
+    return dto ? toProjectSettings(dto) : null;
+  },
+
+  /**
+   * Avatar upload, three legs (see the API doc):
+   *  1. ask the backend for a presigned URL,
+   *  2. PUT the file straight to MinIO — no Authorization header, the URL is
+   *     already signed, and sending one makes the request fail,
+   *  3. tell the backend to verify and persist it.
+   */
+  uploadAvatar: async (projectId: string, file: File): Promise<Project> => {
+    const { data: urlBody } = await http.post(endpoints.projects.avatarUploadUrl(projectId), {
+      mime_type: file.type,
+      size_bytes: file.size,
+    });
+    const { upload_url } = unwrap(urlBody, AvatarUploadUrlDtoSchema);
+
+    // Deliberately `fetch`, not the axios instance: that instance targets the
+    // BFF and attaches credentials, neither of which applies to object storage.
+    const upload = await fetch(upload_url, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+    if (!upload.ok) {
+      throw new Error(`Avatar upload failed with status ${upload.status}`);
+    }
+
+    const { data } = await http.post(endpoints.projects.avatarComplete(projectId));
+    return toProject(unwrap(data, ProjectDtoSchema));
   },
 };

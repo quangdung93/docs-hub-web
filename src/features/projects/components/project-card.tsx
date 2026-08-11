@@ -4,6 +4,7 @@ import { FileText, Folder, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { useI18n } from '@/core/i18n';
+import { orUnknown } from '@/shared/lib/format';
 
 import { projectRoutes } from '../routes';
 import type { Project } from '../schemas/project.schema';
@@ -32,11 +33,11 @@ export function ProjectCard({ project }: { project: Project }) {
       <div className="text-muted-foreground mt-3.5 flex items-center gap-4 text-xs">
         <span className="flex items-center gap-1">
           <FileText className="size-3.5" aria-hidden />
-          {t('projects.documentCount', { count: project.documentCount })}
+          {t('projects.documentCount', { count: orUnknown(project.documentCount) })}
         </span>
         <span className="flex items-center gap-1">
           <Users className="size-3.5" aria-hidden />
-          {t('projects.memberCount', { count: project.memberCount })}
+          {t('projects.memberCount', { count: orUnknown(project.memberCount) })}
         </span>
       </div>
     </Link>

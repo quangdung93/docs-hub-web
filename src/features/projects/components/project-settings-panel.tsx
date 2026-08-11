@@ -6,8 +6,7 @@ import type { ReactNode } from 'react';
 import { useI18n } from '@/core/i18n';
 import { Skeleton, Switch } from '@/shared/ui';
 
-import { useProjectSettings, useUpdateProjectSettings } from '../hooks/use-projects';
-import type { ProjectSettings } from '../schemas/project.schema';
+import { useProjectSettings } from '../hooks/use-projects';
 
 /** Bordered settings group with an icon heading. */
 function SettingsCard({
@@ -51,7 +50,6 @@ function ValueRow({ label, value }: { label: string; value: ReactNode }) {
 export function ProjectSettingsPanel({ projectId }: { projectId: string }) {
   const { t } = useI18n();
   const { data: settings, isPending } = useProjectSettings(projectId);
-  const updateSettings = useUpdateProjectSettings(projectId);
 
   if (isPending || !settings) {
     return (
@@ -63,30 +61,44 @@ export function ProjectSettingsPanel({ projectId }: { projectId: string }) {
     );
   }
 
-  const toggle = (key: keyof ProjectSettings) => (checked: boolean) =>
-    updateSettings.mutate({ ...settings, [key]: checked });
-
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <SettingsCard icon={Cpu} title={t('settings.model.title')}>
-        <ValueRow label={t('settings.model.completion')} value={settings.completionModel} />
-        <ValueRow label={t('settings.model.embedding')} value={settings.embeddingModel} />
-        <ValueRow label={t('settings.model.topK')} value={settings.topK} />
+        <ValueRow
+          label={t('settings.model.completion')}
+          value={settings.completionModel ?? t('settings.unavailable')}
+        />
+        <ValueRow
+          label={t('settings.model.embedding')}
+          value={settings.embeddingModel ?? t('settings.unavailable')}
+        />
+        <ValueRow
+          label={t('settings.model.topK')}
+          value={settings.topK ?? t('settings.unavailable')}
+        />
       </SettingsCard>
 
       <SettingsCard icon={SlidersHorizontal} title={t('settings.processing.title')}>
         <ValueRow
           label={t('settings.processing.chunkSize')}
-          value={t('settings.processing.tokens', { count: settings.chunkSize })}
+          value={
+            settings.chunkSize === null
+              ? t('settings.unavailable')
+              : t('settings.processing.tokens', { count: settings.chunkSize })
+          }
         />
         <ValueRow
           label={t('settings.processing.overlap')}
-          value={t('settings.processing.tokens', { count: settings.chunkOverlap })}
+          value={
+            settings.chunkOverlap === null
+              ? t('settings.unavailable')
+              : t('settings.processing.tokens', { count: settings.chunkOverlap })
+          }
         />
         <div className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground">{t('settings.processing.formats')}</span>
           <span className="text-muted-foreground text-xs">
-            {settings.allowedFormats.join(' · ')}
+            {settings.allowedFormats?.join(' · ') ?? t('settings.unavailable')}
           </span>
         </div>
       </SettingsCard>
@@ -104,13 +116,14 @@ export function ProjectSettingsPanel({ projectId }: { projectId: string }) {
           ] as const
         ).map(([key, label]) => (
           <div key={key} className="flex items-center justify-between gap-3">
-            <span>{label}</span>
-            <Switch
-              checked={settings[key]}
-              onCheckedChange={toggle(key)}
-              label={label}
-              disabled={updateSettings.isPending}
-            />
+            <span className={settings[key] === null ? 'text-muted-foreground' : undefined}>
+              {label}
+            </span>
+            {settings[key] === null ? (
+              <span className="text-muted-foreground text-xs">{t('settings.unavailable')}</span>
+            ) : (
+              <Switch checked={settings[key]} onCheckedChange={() => undefined} label={label} />
+            )}
           </div>
         ))}
       </SettingsCard>

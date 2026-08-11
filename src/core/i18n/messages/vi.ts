@@ -95,6 +95,7 @@ export const vi = {
     'Xóa dự án sẽ xóa toàn bộ tài liệu và lịch sử hỏi–đáp. Không thể hoàn tác.',
   'projectAdmin.danger.delete': 'Xóa dự án',
   'projectAdmin.danger.confirmTitle': 'Xóa dự án “{name}”?',
+  'projectAdmin.danger.confirmNameLabel': 'Nhập đúng tên dự án để xác nhận',
   'projectAdmin.danger.confirmDescription':
     'Toàn bộ tài liệu, chỉ mục và lịch sử hỏi–đáp của dự án sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác.',
   'projectAdmin.footnote':
@@ -115,6 +116,7 @@ export const vi = {
   'members.permission.askOnly': 'Chỉ hỏi đáp',
   'members.invited': 'Đã mời',
   'members.empty': 'Chưa có thành viên nào.',
+  'members.unknownIdentity': 'Chưa có thông tin người dùng',
 
   'settings.model.title': 'Mô hình xử lý',
   'settings.model.completion': 'Mô hình sinh câu trả lời',
@@ -126,6 +128,8 @@ export const vi = {
   'settings.processing.formats': 'Định dạng cho phép',
   'settings.processing.tokens': '{count} token',
   'settings.security.title': 'Bảo mật & Nhật ký',
+  'settings.unavailable': 'Chưa hỗ trợ',
+  'settings.unavailableHint': 'Máy chủ chưa cung cấp cấu hình này.',
   'settings.security.auditLog': 'Ghi audit log truy cập tài liệu',
   'settings.security.membersOnly': 'Chỉ thành viên dự án được truy cập',
   'settings.security.allowExport': 'Cho phép xuất kết quả ra Word / Markdown',

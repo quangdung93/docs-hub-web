@@ -21,7 +21,8 @@ import { ProjectCard } from './project-card';
 export function ProjectGrid() {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
-  const { data: projects, isPending, isError } = useProjects();
+  const { data, isPending, isError } = useProjects();
+  const projects = data?.items;
 
   const query = search.trim().toLowerCase();
   const visible = query

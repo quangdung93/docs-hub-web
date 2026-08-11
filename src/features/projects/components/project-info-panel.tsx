@@ -69,8 +69,8 @@ export function ProjectInfoPanel({ projectId, formId }: { projectId: string; for
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('projectAdmin.owner')}>
             <div className="border-input flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
-              <Avatar name={project.ownerName} size="sm" />
-              {project.ownerName}
+              <Avatar name={project.ownerName ?? project.ownerId} size="sm" />
+              {project.ownerName ?? `#${project.ownerId.slice(0, 8)}`}
             </div>
           </Field>
 
@@ -151,7 +151,9 @@ export function ProjectInfoPanel({ projectId, formId }: { projectId: string; for
         cancelLabel={t('common.cancel')}
         pending={deleteProject.isPending}
         onCancel={() => setConfirmingDelete(false)}
-        onConfirm={() => deleteProject.mutate()}
+        onConfirm={(typed) => deleteProject.mutate(typed)}
+        confirmPhrase={project.name}
+        confirmPhraseLabel={t('projectAdmin.danger.confirmNameLabel')}
       />
     </div>
   );
