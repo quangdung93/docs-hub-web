@@ -65,30 +65,80 @@ export class AppError extends Error {
   readonly code: string;
   readonly status: number;
   readonly details?: Record<string, unknown>;
+  /** Backend hint that retrying the same call may succeed (e.g. version conflict). */
+  readonly retryable: boolean;
+  /**
+   * True when the backend reported this via `success:false` on an HTTP 200 —
+   * i.e. an expected business outcome, not a fault. The UI should show
+   * `message` inline on the form rather than as a system error.
+   */
+  readonly isBusiness: boolean;
 
   constructor(params: {
     code: string;
     message: string;
     status: number;
     details?: Record<string, unknown>;
+    retryable?: boolean;
+    isBusiness?: boolean;
   }) {
     super(params.message);
     this.name = 'AppError';
     this.code = params.code;
     this.status = params.status;
     this.details = params.details;
+    this.retryable = params.retryable ?? false;
+    this.isBusiness = params.isBusiness ?? false;
   }
 
   /** True for 401 — callers use this to trigger the login redirect. */
   get isUnauthorized(): boolean {
-    return this.status === 401;
+    return this.status === 401 || this.code === ERROR_CODE.AUTH;
+  }
+
+  /**
+   * Field-level validation messages from a 400, keyed by the backend's field
+   * name. Body fields arrive PascalCase (`Name`), path params snake_case (`id`),
+   * so callers look up whichever the endpoint uses.
+   */
+  fieldError(...names: string[]): string | undefined {
+    for (const name of names) {
+      const value = this.details?.[name];
+      if (typeof value === 'string') return value;
+    }
+    return undefined;
   }
 }
 
-/** Well-known client-side error codes (network/timeout/unknown). */
+/**
+ * Error codes. The `ERR_*` values are client-side (transport never reached the
+ * backend); the rest mirror the backend taxonomy so callers can branch on a
+ * specific business outcome without string literals scattered through features.
+ */
 export const ERROR_CODE = {
+  // Client-side transport failures.
   NETWORK: 'ERR_NETWORK',
   TIMEOUT: 'ERR_TIMEOUT',
   CANCELED: 'ERR_CANCELED',
   UNKNOWN: 'ERR_UNKNOWN',
+
+  // Backend technical codes.
+  VALIDATION: 'REQ_400',
+  AUTH: 'AUTH_401',
+  USER_NOT_FOUND: 'USR_404',
+  PROJECT_NOT_FOUND: 'PRJ_404',
+  MEMBER_NOT_FOUND: 'MBR_404',
+
+  // Backend business codes (always HTTP 200 + success:false).
+  DUPLICATE_EMAIL: 'DUPLICATE_EMAIL',
+  USER_LOCKED: 'USER_LOCKED',
+  CONFLICT_VERSION: 'CONFLICT_VERSION',
+  INVALID_PROFILE: 'INVALID_PROFILE',
+  ALREADY_MEMBER: 'ALREADY_MEMBER',
+  INVITE_NOT_PENDING: 'INVITE_NOT_PENDING',
+  CANNOT_MODIFY_OWNER: 'CANNOT_MODIFY_OWNER',
+  CONFIRM_NAME_MISMATCH: 'CONFIRM_NAME_MISMATCH',
+  IMAGE_INVALID: 'IMAGE_INVALID',
+  FILE_TOO_LARGE: 'FILE_TOO_LARGE',
+  AVATAR_NOT_UPLOADED: 'AVATAR_NOT_UPLOADED',
 } as const;

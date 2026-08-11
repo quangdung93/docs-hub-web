@@ -1,32 +1,55 @@
 /**
  * Single registry of every backend path the app talks to. Feature `api/` modules
- * import from here instead of inlining string literals, so wiring a real backend
- * (or renaming a route) is a one-file change — this is the map you edit when the
- * API lands.
+ * import from here instead of inlining string literals, so a route rename is a
+ * one-file change.
  *
- * Paths are relative to the transport base:
+ * Paths mirror docs-hub-api and keep its two prefixes:
+ *  - `/public/api/v1/*`   — no token required
+ *  - `/internal/api/v1/*` — `Authorization: Bearer <token>` required
+ *
+ * They are relative to the transport base:
  *  - client (`shared/api/http`) → `/api` + path → BFF proxy → `${API_URL}` + path
  *  - server (`core/api/server-fetch`) → `${API_URL}` + path
  */
+const PUBLIC = '/public/api/v1';
+const INTERNAL = '/internal/api/v1';
+
 export const endpoints = {
   health: '/health',
 
   auth: {
-    login: '/auth/login',
-    logout: '/auth/logout',
-    refresh: '/auth/refresh',
+    login: `${PUBLIC}/auth/login`,
+    logout: `${INTERNAL}/auth/logout`,
+    me: `${INTERNAL}/auth/me`,
+  },
+
+  users: {
+    list: `${INTERNAL}/users`,
+    create: `${INTERNAL}/users`,
+    checkEmail: `${INTERNAL}/users/check-email`,
+    detail: (userId: string) => `${INTERNAL}/users/${userId}`,
+    update: (userId: string) => `${INTERNAL}/users/${userId}`,
+    updateStatus: (userId: string) => `${INTERNAL}/users/${userId}/status`,
+    remove: (userId: string) => `${INTERNAL}/users/${userId}`,
   },
 
   projects: {
-    list: '/projects',
-    create: '/projects',
-    detail: (projectId: string) => `/projects/${projectId}`,
-    update: (projectId: string) => `/projects/${projectId}`,
-    remove: (projectId: string) => `/projects/${projectId}`,
-    members: (projectId: string) => `/projects/${projectId}/members`,
-    settings: (projectId: string) => `/projects/${projectId}/settings`,
+    list: `${INTERNAL}/projects`,
+    create: `${INTERNAL}/projects`,
+    update: (projectId: string) => `${INTERNAL}/projects/${projectId}`,
+    remove: (projectId: string) => `${INTERNAL}/projects/${projectId}`,
+    avatarUploadUrl: (projectId: string) => `${INTERNAL}/projects/${projectId}/avatar/upload-url`,
+    avatarComplete: (projectId: string) => `${INTERNAL}/projects/${projectId}/avatar/complete`,
+    members: (projectId: string) => `${INTERNAL}/projects/${projectId}/members`,
+    acceptInvite: (projectId: string) => `${INTERNAL}/projects/${projectId}/members/me/accept`,
+    member: (projectId: string, userId: string) =>
+      `${INTERNAL}/projects/${projectId}/members/${userId}`,
   },
 
+  // ── Not implemented by the backend yet ────────────────────────────────────
+  // The documents and chat modules do not exist in docs-hub-api. These paths are
+  // provisional and still served by the MSW mock; confirm them with the backend
+  // team before wiring the real thing.
   documents: {
     list: (projectId: string) => `/projects/${projectId}/documents`,
     upload: (projectId: string) => `/projects/${projectId}/documents`,

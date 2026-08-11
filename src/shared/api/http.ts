@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios';
 
-import { AppError, ApiFailureSchema, ERROR_CODE } from '@/core/api/errors';
+import { ApiEnvelopeSchema } from '@/core/api/envelope';
+import { AppError, ERROR_CODE } from '@/core/api/errors';
 
 /**
  * Client-side transport. Lives in `shared/` (not `core/`) on purpose: Axios is
@@ -50,11 +51,19 @@ export function normalizeAxiosError(error: AxiosError): AppError {
     });
   }
 
-  // Prefer the structured `success:false` envelope when the backend sent one.
-  const parsed = ApiFailureSchema.safeParse(response.data);
-  if (parsed.success) {
-    const { code, message, details } = parsed.data.error;
-    return new AppError({ code, message, status: response.status, details });
+  // Prefer the structured envelope when the backend sent one. This is the 4xx/5xx
+  // path (technical failures); business failures arrive as HTTP 200 and are
+  // handled by `unwrap`, not here.
+  const parsed = ApiEnvelopeSchema.safeParse(response.data);
+  if (parsed.success && parsed.data.error) {
+    const { code, message, details, retryable } = parsed.data.error;
+    return new AppError({
+      code,
+      message,
+      status: response.status,
+      details: (details ?? undefined) as Record<string, unknown> | undefined,
+      retryable: retryable ?? false,
+    });
   }
 
   return new AppError({

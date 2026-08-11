@@ -8,7 +8,7 @@ export const queryKeys = {
 
   projects: {
     all: ['projects'] as const,
-    list: (search?: string) => ['projects', 'list', search ?? ''] as const,
+    list: () => ['projects', 'list'] as const,
     detail: (projectId: string) => ['projects', 'detail', projectId] as const,
     members: (projectId: string) => ['projects', 'members', projectId] as const,
     settings: (projectId: string) => ['projects', 'settings', projectId] as const,
