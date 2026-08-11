@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
+import { orUnknown } from '@/shared/lib/format';
 import { useProject } from '@/features/projects';
 import { projectRoutes } from '@/features/projects/routes';
 import { Button, Card, EmptyState, IconButton, Skeleton } from '@/shared/ui';
@@ -67,7 +68,8 @@ export function ChatScreen({ projectId }: { projectId: string }) {
                     <Folder className="size-3.5 shrink-0" aria-hidden />
                     <span className="truncate">
                       {project?.name}
-                      {project && ` · ${t('documents.count', { count: project.documentCount })}`}
+                      {project &&
+                        ` · ${t('documents.count', { count: orUnknown(project.documentCount) })}`}
                     </span>
                   </div>
                 </div>

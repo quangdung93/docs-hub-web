@@ -1,9 +1,5 @@
 import type { Document } from '../../features/documents/schemas/document.schema';
-import type {
-  Project,
-  ProjectMember,
-  ProjectSettings,
-} from '../../features/projects/schemas/project.schema';
+import type { ProjectDto, ProjectMemberDto } from '../../features/projects/api/project.dto';
 import type { ChatMessage } from '../../features/chat/schemas/chat.schema';
 
 /**
@@ -21,66 +17,100 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-const projects: Project[] = [
+const projects: ProjectDto[] = [
   {
     id: 'p1',
+    owner_id: 'u-viettq45',
     name: 'Core Banking',
     description: 'BRD, tài liệu nghiệp vụ và biên bản họp phân hệ lõi.',
     status: 'active',
-    imageUrl: null,
-    documentCount: 12,
-    memberCount: 8,
-    chunkCount: 642,
-    ownerName: 'VietTQ45',
-    createdAt: ago(120 * DAY),
+    settings: {
+      model: 'qwen2.5',
+      top_k: 5,
+      chunk_size: 800,
+      allowed_formats: ['PDF', 'DOCX', 'TXT', 'MD'],
+    },
+    created_at: ago(120 * DAY),
   },
   {
     id: 'p2',
+    owner_id: 'u-viettq45',
     name: 'Quy trình KYC',
     description: 'Quy trình định danh khách hàng và yêu cầu tuân thủ.',
     status: 'active',
-    imageUrl: null,
-    documentCount: 7,
-    memberCount: 5,
-    chunkCount: 413,
-    ownerName: 'VietTQ45',
-    createdAt: ago(90 * DAY),
+    settings: {
+      model: 'qwen2.5',
+      top_k: 5,
+      chunk_size: 800,
+      allowed_formats: ['PDF', 'DOCX', 'TXT', 'MD'],
+    },
+    created_at: ago(90 * DAY),
   },
   {
     id: 'p3',
+    owner_id: 'u-viettq45',
     name: 'Cổng thanh toán',
     description: 'Đặc tả tích hợp và tài liệu API đối tác.',
     status: 'active',
-    imageUrl: null,
-    documentCount: 9,
-    memberCount: 6,
-    chunkCount: 388,
-    ownerName: 'DungVQ11',
-    createdAt: ago(60 * DAY),
+    settings: {
+      model: 'qwen2.5',
+      top_k: 5,
+      chunk_size: 800,
+      allowed_formats: ['PDF', 'DOCX', 'TXT', 'MD'],
+    },
+    created_at: ago(60 * DAY),
   },
 ];
 
-const members: ProjectMember[] = [
-  { id: 'm1', name: 'VietTQ45', jobTitle: 'Team lead', role: 'owner', joinedAt: ago(90 * DAY) },
+const members: ProjectMemberDto[] = [
+  {
+    id: 'm1',
+    project_id: 'p2',
+    user_id: 'u-viettq45',
+    role: 'owner',
+    status: 'active',
+    invited_at: ago(90 * DAY),
+    joined_at: ago(90 * DAY),
+  },
   {
     id: 'm2',
-    name: 'PhongDT29',
-    jobTitle: 'Business Analyst',
+    project_id: 'p2',
+    user_id: 'u-phongdt29',
     role: 'editor',
-    joinedAt: ago(89 * DAY),
+    status: 'active',
+    invited_at: ago(89 * DAY),
+    joined_at: ago(89 * DAY),
   },
   {
     id: 'm3',
-    name: 'DungVQ11',
-    jobTitle: 'Software Architect',
+    project_id: 'p2',
+    user_id: 'u-dungvq11',
     role: 'editor',
-    joinedAt: ago(89 * DAY),
+    status: 'active',
+    invited_at: ago(89 * DAY),
+    joined_at: ago(89 * DAY),
   },
-  { id: 'm4', name: 'PhiLK', jobTitle: 'Tester', role: 'viewer', joinedAt: ago(87 * DAY) },
-  { id: 'm5', name: 'TrungNT110', jobTitle: 'Project Manager', role: 'pending', joinedAt: null },
+  {
+    id: 'm4',
+    project_id: 'p2',
+    user_id: 'u-philk',
+    role: 'viewer',
+    status: 'active',
+    invited_at: ago(87 * DAY),
+    joined_at: ago(87 * DAY),
+  },
+  {
+    id: 'm5',
+    project_id: 'p2',
+    user_id: 'u-trungnt110',
+    role: 'editor',
+    status: 'pending',
+    invited_at: ago(80 * DAY),
+    joined_at: null,
+  },
 ];
 
-const settings: ProjectSettings = {
+const settings = {
   completionModel: 'qwen2.5',
   embeddingModel: 'nomic-embed-text',
   topK: 5,

@@ -48,8 +48,8 @@ export const documentHandlers = [
 
     db.documents[projectId] = [document, ...(db.documents[projectId] ?? [])];
 
-    const project = db.projects.find((item) => item.id === projectId);
-    if (project) project.documentCount += 1;
+    // No counter to maintain: ProjectResponse does not expose document counts,
+    // so the mock does not invent one either.
 
     return HttpResponse.json(envelope(document), { status: 201 });
   }),
@@ -61,8 +61,6 @@ export const documentHandlers = [
 
     if (index >= 0) {
       documents.splice(index, 1);
-      const project = db.projects.find((item) => item.id === projectId);
-      if (project) project.documentCount = Math.max(0, project.documentCount - 1);
     }
 
     return HttpResponse.json(envelope({ ok: true }));

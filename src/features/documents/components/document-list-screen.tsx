@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { type MessageKey, useI18n } from '@/core/i18n';
+import { orUnknown } from '@/shared/lib/format';
 import { useProject } from '@/features/projects';
 import { projectRoutes } from '@/features/projects/routes';
 import { Button, IconButton, SearchInput, Select } from '@/shared/ui';
@@ -59,7 +60,7 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
             <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-sm">
               <Folder className="size-3.5" aria-hidden />
               {project?.name}
-              {project && ` · ${t('documents.count', { count: project.documentCount })}`}
+              {project && ` · ${t('documents.count', { count: orUnknown(project.documentCount) })}`}
             </p>
           </div>
         </div>
