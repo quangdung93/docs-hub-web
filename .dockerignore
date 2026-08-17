@@ -1,0 +1,15 @@
+# Giữ build context nhỏ — node_modules được cài lại trong image.
+node_modules
+.next
+.git
+.github
+.husky
+coverage
+playwright-report
+test-results
+*.log
+.DS_Store
+.env*.local
+.vscode
+.idea
+docs

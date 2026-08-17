@@ -1,0 +1,43 @@
+# Web (Next.js) chạy trên cùng máy EC2 với docs-hub-api.
+# Dùng: make ec2-up / ec2-down / ec2-logs.
+#
+# Hai điểm cần biết:
+#   1. Container chỉ bind 127.0.0.1:3000 — nginx trên host proxy 443 -> đây.
+#      Không mở 3000 ra internet.
+#   2. Nó join network của stack API (document-hub-ec2_default) để gọi thẳng
+#      http://api:8080 trong docker network, không vòng ra internet.
+name: docs-hub-web
+
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+      args:
+        # NEXT_PUBLIC_* phải có mặt lúc build vì Next inline chúng vào bundle.
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Document Hub}
+        NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-production}
+    image: docs-hub-web:ec2
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      APP_ENV: ${APP_ENV:-production}
+      # Trỏ vào service "api" trong network của stack API. Prefix /public/api/v1
+      # là nhóm route không cần JWT của backend (xem internal/bootstrap/router.go
+      # bên docs-hub-api); BFF nối tiếp path phía sau.
+      API_URL: ${API_URL:?thiếu API_URL trong .env.ec2}
+      ENABLE_MOCKS: ${ENABLE_MOCKS:-false}
+      AUTH_SECRET: ${AUTH_SECRET:?thiếu AUTH_SECRET trong .env.ec2}
+      JWT_ISSUER: ${JWT_ISSUER:-docs-hub-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - default
+      - api
+
+networks:
+  # Network do stack docs-hub-api tạo ra; phải chạy stack đó trước.
+  api:
+    external: true
+    name: document-hub-ec2_default
