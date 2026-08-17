@@ -1,0 +1,45 @@
+# Kiểm tra chất lượng — chạy cho mọi PR và mọi push lên nhánh làm việc.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main] # push lên main đã có deploy.yml kiểm tra trước khi build
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prettier
+        run: npm run format:check
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Build luôn trong CI: lỗi build của Next (server component, env schema...)
+      # thường không lộ ra ở lint/typecheck.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          # env.ts validate lúc import, nên phải có giá trị hợp lệ khi build.
+          APP_ENV: production
+          API_URL: http://api:8080/public/api/v1
+          ENABLE_MOCKS: 'false'
+          AUTH_SECRET: ci-placeholder-secret-32-characters
