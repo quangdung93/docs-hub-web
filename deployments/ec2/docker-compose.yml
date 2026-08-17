@@ -33,7 +33,7 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-docs-hub-api}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-}
     ports:
-      - "127.0.0.1:3000:3000"
+      - '127.0.0.1:3000:3000'
     networks:
       - default
       - api
