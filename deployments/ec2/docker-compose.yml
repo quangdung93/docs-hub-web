@@ -17,7 +17,9 @@ services:
         # NEXT_PUBLIC_* phải có mặt lúc build vì Next inline chúng vào bundle.
         NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Document Hub}
         NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-production}
-    image: docs-hub-web:ec2
+    # CI đặt WEB_IMAGE=ghcr.io/<owner>/docs-hub-web:<sha> rồi `compose pull`.
+    # Không có biến đó (chạy tay trên máy) thì rơi về image build tại chỗ.
+    image: ${WEB_IMAGE:-docs-hub-web:ec2}
     restart: unless-stopped
     environment:
       NODE_ENV: production

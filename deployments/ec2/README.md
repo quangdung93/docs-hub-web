@@ -36,7 +36,30 @@ qua internet.
    sudo certbot --nginx -d docshub.io.vn --redirect
    ```
 
-## Cập nhật code
+## CI/CD
+
+```
+merge vào main
+   └─ verify      (GitHub runner)  lint + typecheck
+   └─ build-push  (GitHub runner)  build amd64 → ghcr.io/<owner>/docs-hub-web:<sha> + :latest
+   └─ deploy      (runner trên EC2) compose pull → up -d web → chờ HTTP 200
+```
+
+Build chạy trên runner của GitHub, **không** trên EC2 — `next build` cần nhiều RAM
+hơn mức instance 2 vCPU/4GB chịu được. Bước deploy chạy trên self-hosted runner
+đặt ngay trên EC2 nên không phải mở port 22 cho dải IP của GitHub.
+
+Cài runner (một lần, token sống 1 giờ, lấy ở Settings → Actions → Runners; script
+nằm bên repo `docs-hub-api`):
+
+```bash
+bash /home/web/docs-hub-api/deployments/ec2/setup-runner.sh \
+  https://github.com/<owner>/docs-hub-web <TOKEN> web
+```
+
+Rollback: Actions → deploy → **Run workflow** → điền `image_tag` là SHA cũ.
+
+## Cập nhật code thủ công
 
 Nếu thư mục trên EC2 là bản clone git:
 
