@@ -43,6 +43,23 @@ git pull
 make ec2-restart
 ```
 
+## Khi EC2 quá yếu để build
+
+`next build` ngốn RAM hơn mức một instance 2 vCPU / 4GB chịu được — build tại chỗ
+có thể làm nghẽn cả máy (kể cả sshd). Khi đó build ở máy dev rồi nạp image sang,
+không cần registry:
+
+```bash
+# tại máy dev
+make ec2-image-push EC2_HOST=ubuntu@<ip> SSH_KEY=~/duong/dan/key.pem
+
+# trên EC2
+cd /home/web/docs-hub-web && sudo make ec2-start   # chạy image vừa nạp, không build
+```
+
+Máy dev Apple Silicon build `--platform linux/amd64` (mặc định của `PLATFORM`)
+nên chạy qua emulation và chậm hơn hẳn build native.
+
 ## Lưu ý
 
 - **`NEXT_PUBLIC_*` được inline lúc build**, không phải lúc chạy. Đổi chúng thì
