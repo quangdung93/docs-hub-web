@@ -38,10 +38,28 @@ qua internet.
 
 ## Cập nhật code
 
+Nếu thư mục trên EC2 là bản clone git:
+
 ```bash
-git pull
-make ec2-restart
+git pull && make ec2-restart
 ```
+
+Nếu source được đẩy sang bằng rsync (cách đang dùng — repo web nằm ở tài khoản
+GitHub khác nên EC2 không clone được):
+
+```bash
+# tại máy dev
+rsync -az --delete --exclude node_modules --exclude .next --exclude .git \
+  --exclude '.env*.local' --exclude '.env.ec2' -e "ssh -i ~/duong/dan/key.pem" \
+  ./ ubuntu@<ip>:/home/web/docs-hub-web/
+
+# trên EC2
+cd /home/web/docs-hub-web && sudo make ec2-restart
+```
+
+**Bắt buộc có `--exclude '.env.ec2'`**: file đó chỉ tồn tại trên EC2, nên `--delete`
+sẽ xoá nó và web mất toàn bộ secret ở lần build kế tiếp. `--delete` cũng xoá mọi
+file lạ khác trên EC2 — đừng sửa code trực tiếp ở đó.
 
 ## Khi EC2 quá yếu để build
 
