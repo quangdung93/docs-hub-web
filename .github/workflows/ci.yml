@@ -1,4 +1,4 @@
-# Kiểm tra chất lượng — chạy cho mọi PR và mọi push lên nhánh làm việc.
+# Kiểm tra chất lượng — chạy cho mọi pull request.
 name: ci
 
 # Chỉ chạy trên pull_request: nếu bật cả push thì mỗi commit trong PR kích hoạt
