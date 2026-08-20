@@ -10,6 +10,52 @@ lỗi nghiệp vụ trả HTTP 200 kèm `success:false`, và phân trang qua
 
 ---
 
+## P0 — Bug đang có trên production (phát hiện khi test thật 20/08/2026)
+
+Đã chạy toàn bộ 22 endpoint của `https://api.docshub.io.vn` qua BFF của FE bằng
+tài khoản `admin@local`. Ba module `auth`/`user`/`project` khớp tài liệu, kể cả
+các mã lỗi nghiệp vụ (`CONFIRM_NAME_MISMATCH`, `IMAGE_INVALID`, `FILE_TOO_LARGE`,
+`AVATAR_NOT_UPLOADED` đều trả đúng). Hai vấn đề dưới đây thì phải sửa ở BE.
+
+### 0.1. `avatar/upload-url` trả hostname nội bộ Docker — luồng ảnh hỏng hoàn toàn
+
+`POST /projects/{id}/avatar/upload-url` trả về:
+
+```
+http://minio:9000/document-hub/projects/{id}/avatar?X-Amz-Algorithm=...
+```
+
+`minio` là service name trong Docker network, **trình duyệt không resolve được**
+(đã kiểm tra: không có bản ghi DNS công khai, `minio.docshub.io.vn` và
+`storage.docshub.io.vn` đều không tồn tại). Theo đúng tài liệu thì FE phải `PUT`
+thẳng file lên URL này từ browser — nên bước 2b sẽ luôn fail.
+
+Thêm nữa scheme là `http`, trong khi FE chạy trên `https://docshub.io.vn`: kể cả
+khi host resolve được, browser vẫn chặn vì mixed content.
+
+**Cần:** MinIO có endpoint công khai qua HTTPS, và presigned URL phải ký theo
+đúng public host đó (`MINIO_PUBLIC_ENDPOINT` hoặc tương đương), không phải
+`minio:9000`. Ký bằng host nội bộ rồi FE tự đổi host sẽ làm sai chữ ký.
+
+### 0.2. Tài khoản seed `admin@local` không phải email hợp lệ
+
+`username` của tài khoản mặc định là `admin@local` — thiếu TLD nên trượt mọi
+validate email chuẩn. FE đã xử lý phía mình (coi `username` là định danh đăng
+nhập, không validate như email). Nêu ra để BE biết: nếu có chỗ nào ràng buộc
+`username` phải là email thì tài khoản seed sẽ tự mâu thuẫn.
+
+### 0.3. Token JWT — xác nhận cách FE đang dùng
+
+Token BE ký có payload `{user_id, email, roles, iss, sub, exp, iat}` — không có
+`aud`, không có tên hiển thị. FE **không verify chữ ký** (không giữ secret của
+BE, và cũng không nên), chỉ decode để lấy `roles`/`email` cho việc render và
+điều hướng; mọi quyết định phân quyền vẫn do BE kiểm ở từng request.
+
+Nếu sau này BE muốn FE verify được, xin expose **JWKS endpoint** (RS256) thay vì
+chia sẻ secret HS256.
+
+---
+
 ## P0 — Chặn hẳn, không có thì màn hình không chạy được
 
 ### 1. Module `document` (chưa có gì)
@@ -178,6 +224,7 @@ Không gấp nhưng nên có trong kế hoạch.
 
 | # | Việc | Mức |
 |---|---|---|
+| 0 | Presigned URL avatar trả `minio:9000` → browser không gọi được | **P0 (bug)** |
 | 1 | Module `document` (4 API + trạng thái index) | **P0** |
 | 2 | Module `chat` (2 API + cấu trúc citation) | **P0** |
 | 3 | `GET /projects/{id}` | P1 |
