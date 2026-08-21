@@ -22,14 +22,17 @@ export function UploadQueueItem({
 }) {
   const { t } = useI18n();
   const rejected = isRejected(item.status);
+  // A server-side failure looks like a rejection to the user but has a different
+  // cause — and a different hint, since retrying may well succeed.
+  const failed = item.status === 'failed';
 
   return (
     <li
       className={cn(
         'rounded-lg border p-3',
-        rejected && 'border-status-failed/40 bg-status-failed-bg/50',
+        (rejected || failed) && 'border-status-failed/40 bg-status-failed-bg/50',
         item.status === 'embedding' && 'border-brand/30 bg-brand-subtle/40',
-        !rejected && item.status !== 'embedding' && 'border-border'
+        !rejected && !failed && item.status !== 'embedding' && 'border-border'
       )}
     >
       <div className="flex items-center gap-3">
@@ -59,13 +62,17 @@ export function UploadQueueItem({
               </span>
             )}
 
-            {rejected && (
+            {(rejected || failed) && (
               <span className="text-status-failed flex shrink-0 items-center gap-1 text-xs font-medium">
                 <AlertCircle className="size-3.5" aria-hidden />
                 {t(
-                  item.status === 'rejected-size'
-                    ? 'upload.status.tooLarge'
-                    : 'upload.status.rejected'
+                  failed
+                    ? item.error === 'no-version'
+                      ? 'upload.status.noVersion'
+                      : 'upload.status.failed'
+                    : item.status === 'rejected-size'
+                      ? 'upload.status.tooLarge'
+                      : 'upload.status.rejected'
                 )}
               </span>
             )}
@@ -100,9 +107,15 @@ export function UploadQueueItem({
             />
           )}
 
-          {rejected && (
+          {(rejected || failed) && (
             <div className="text-status-failed/80 mt-0.5 text-xs">
-              {t('upload.status.rejectedHint')}
+              {t(
+                failed
+                  ? item.error === 'no-version'
+                    ? 'upload.status.noVersionHint'
+                    : 'upload.status.failedHint'
+                  : 'upload.status.rejectedHint'
+              )}
             </div>
           )}
         </div>

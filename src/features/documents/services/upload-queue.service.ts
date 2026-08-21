@@ -11,7 +11,14 @@ import {
  * state this module produces.
  */
 export type UploadItemStatus =
-  'uploading' | 'embedding' | 'indexed' | 'rejected-format' | 'rejected-size';
+  | 'uploading'
+  | 'embedding'
+  | 'indexed'
+  /** The server refused the upload, or storage failed — distinct from the two
+   *  client-side rejections below, which never reached the server at all. */
+  | 'failed'
+  | 'rejected-format'
+  | 'rejected-size';
 
 export interface UploadItem {
   id: string;
@@ -21,6 +28,11 @@ export interface UploadItem {
   /** 0–100 while uploading; undefined once the server takes over (embedding). */
   progress?: number;
   chunkCount?: number;
+  /** Why the row failed, when the reason is known ahead of the request. */
+  error?: 'no-version';
+  /** Set once the server has accepted the file; enables retry and download. */
+  documentId?: string;
+  revisionId?: string;
 }
 
 export function extensionOf(fileName: string): string {
@@ -30,10 +42,26 @@ export function extensionOf(fileName: string): string {
 /**
  * Does a file belong to a format bucket? `'all'` matches everything, so callers
  * pass the filter value straight through without branching on the sentinel.
+ *
+ * Matches on the extension when there is one, and otherwise on the document's
+ * format label ("Excel", "PDF"). Both are needed: the upload queue knows a real
+ * file name, while a stored document is titled by its uploader and may carry no
+ * extension at all — filtering those on the file name alone would hide every row.
  */
-export function matchesFormat(fileName: string, format: DocumentFormat | 'all'): boolean {
+export function matchesFormat(
+  fileName: string,
+  format: DocumentFormat | 'all',
+  formatLabel?: string
+): boolean {
   if (format === 'all') return true;
-  return (DOCUMENT_FORMATS[format] as readonly string[]).includes(extensionOf(fileName));
+
+  const extensions = DOCUMENT_FORMATS[format] as readonly string[];
+  const extension = extensionOf(fileName);
+  if (extension && extensions.includes(extension)) return true;
+
+  // `format` is the bucket key ('excel'); the label is what the mapper produced
+  // from the MIME type ('Excel'). Compare case-insensitively.
+  return Boolean(formatLabel) && formatLabel!.toLowerCase() === String(format).toLowerCase();
 }
 
 /** A rejected file still enters the queue — the user needs to see *why* it failed. */
@@ -50,7 +78,7 @@ export function isRejected(status: UploadItemStatus): boolean {
 }
 
 export function isSettled(status: UploadItemStatus): boolean {
-  return status === 'indexed' || isRejected(status);
+  return status === 'indexed' || status === 'failed' || isRejected(status);
 }
 
 /** Progress counter under the queue heading: "2/4 complete". */

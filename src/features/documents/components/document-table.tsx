@@ -54,7 +54,11 @@ export function DocumentTable({
     return (documents ?? []).filter((document) => {
       const matchesQuery = !query || document.name.toLowerCase().includes(query);
       const matchesStatus = statusFilter === 'all' || document.status === statusFilter;
-      return matchesQuery && matchesStatus && matchesFormat(document.name, formatFilter);
+      return (
+        matchesQuery &&
+        matchesStatus &&
+        matchesFormat(document.fileName ?? document.name, formatFilter, document.format)
+      );
     });
   }, [documents, search, formatFilter, statusFilter]);
 
@@ -109,7 +113,7 @@ export function DocumentTable({
               <TableRow key={document.id}>
                 <TableCell>
                   <div className="flex items-center gap-2.5">
-                    <FileTypeIcon fileName={document.name} />
+                    <FileTypeIcon fileName={document.fileName ?? document.name} />
                     <div className="leading-tight">
                       <div className="font-medium">{document.name}</div>
                       <div className="text-muted-foreground text-xs">{document.format}</div>

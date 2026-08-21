@@ -3,7 +3,19 @@ export { DocumentStatusBadge } from './components/document-status-badge';
 export { DocumentTable } from './components/document-table';
 export { UploadPanel } from './components/upload-panel';
 export { UploadScreen } from './components/upload-screen';
-export { documentListQueryOptions, useDeleteDocument, useDocuments } from './hooks/use-documents';
+export {
+  documentDetailQueryOptions,
+  documentListQueryOptions,
+  projectVersionsQueryOptions,
+  useCreateProjectVersion,
+  useDeleteDocument,
+  useDocumentDetail,
+  useDocuments,
+  useProjectVersions,
+  useRetryRevision,
+  useUpdateDocument,
+} from './hooks/use-documents';
+export { documentsApi, versionsApi } from './api/documents.api';
 export { useUploadQueue } from './hooks/use-upload-queue';
 export {
   ACCEPT_ATTRIBUTE,

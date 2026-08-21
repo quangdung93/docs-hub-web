@@ -16,8 +16,15 @@ export const queryKeys = {
 
   documents: {
     all: ['documents'] as const,
-    list: (projectId: string, filters?: Record<string, unknown>) =>
+    list: (projectId: string, filters?: object) =>
       ['documents', 'list', projectId, filters ?? {}] as const,
+    detail: (projectId: string, documentId: string) =>
+      ['documents', 'detail', projectId, documentId] as const,
+  },
+
+  versions: {
+    all: ['versions'] as const,
+    list: (projectId: string) => ['versions', 'list', projectId] as const,
   },
 
   chat: {

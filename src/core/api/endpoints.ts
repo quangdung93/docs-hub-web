@@ -46,18 +46,44 @@ export const endpoints = {
       `${INTERNAL}/projects/${projectId}/members/${userId}`,
   },
 
-  // ── Not implemented by the backend yet ────────────────────────────────────
-  // The documents and chat modules do not exist in docs-hub-api. These paths are
-  // provisional and still served by the MSW mock; confirm them with the backend
-  // team before wiring the real thing.
-  documents: {
-    list: (projectId: string) => `/projects/${projectId}/documents`,
-    upload: (projectId: string) => `/projects/${projectId}/documents`,
-    remove: (projectId: string, documentId: string) =>
-      `/projects/${projectId}/documents/${documentId}`,
-    download: (projectId: string, documentId: string) =>
-      `/projects/${projectId}/documents/${documentId}/download`,
+  versions: {
+    list: (projectId: string) => `${INTERNAL}/projects/${projectId}/versions`,
+    create: (projectId: string) => `${INTERNAL}/projects/${projectId}/versions`,
   },
+
+  documents: {
+    list: (projectId: string) => `${INTERNAL}/projects/${projectId}/documents`,
+    detail: (projectId: string, documentId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}`,
+    update: (projectId: string, documentId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}`,
+    remove: (projectId: string, documentId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}`,
+    /** Multipart upload of a brand-new document (first revision). */
+    upload: (projectId: string) => `${INTERNAL}/projects/${projectId}/documents/uploads`,
+    /** Multipart upload of a further revision of an existing document. */
+    uploadRevision: (projectId: string, documentId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions`,
+    /** Presigned direct-to-storage upload; only when the backend runs MinIO. */
+    presign: (projectId: string) => `${INTERNAL}/projects/${projectId}/documents/uploads/presign`,
+    completeUpload: (projectId: string, uploadId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/uploads/${uploadId}/complete`,
+    revisionStatus: (projectId: string, documentId: string, revisionId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/status`,
+    revisionRetry: (projectId: string, documentId: string, revisionId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/retry`,
+    revisionDownload: (projectId: string, documentId: string, revisionId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/download`,
+    revisionView: (projectId: string, documentId: string, revisionId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/view`,
+  },
+
+  // ── In Swagger but NOT routed on the deployed build ───────────────────────
+  // `POST /projects/{id}/retrieval` is documented but answers a bare 404 (not
+  // even an error envelope), verified 21/08/2026. The path is kept here so the
+  // chat slice has one place to switch to; until the backend deploys it, chat
+  // still runs on the MSW mock.
+  retrieval: (projectId: string) => `${INTERNAL}/projects/${projectId}/retrieval`,
 
   chat: {
     ask: (projectId: string) => `/projects/${projectId}/chat`,
