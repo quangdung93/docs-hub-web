@@ -10,6 +10,106 @@ lỗi nghiệp vụ trả HTTP 200 kèm `success:false`, và phân trang qua
 
 ---
 
+## P0 — Bug chặn hoàn toàn (test thật 21/08/2026, sau khi BE ra module document)
+
+BE đã bổ sung **module `document`, `version` và `retrieval`** — cảm ơn team. Đã
+test lại toàn bộ bằng `admin@local` trên `https://api.docshub.io.vn`. Ba mục
+dưới đây đang chặn, xin ưu tiên.
+
+### 0.0. `POST /documents/uploads` trả `SYS_500` — hỏng sau lần upload đầu tiên
+
+Đây là **bug nặng nhất hiện tại**. Lần upload đầu tiên thành công trọn vẹn; từ
+lần thứ hai trở đi mọi request đều trả:
+
+```
+HTTP 500  {"code":"SYS_500","message":"Không thể tạo revision"}
+```
+
+Đã thử và loại trừ hết các khả năng từ phía FE:
+
+| Thử | Kết quả |
+|---|---|
+| Đổi định dạng (TXT, MD, CSV, PDF, DOCX, XLSX) | 500 hết |
+| Đổi version (seeded / mới tạo qua API) | 500 hết |
+| Đổi project (cả 2 project seed) | 500 hết |
+| File `.bin` (định dạng sai) | **400 đúng** — validate vẫn chạy tốt |
+| Sai `sha256` | **400 đúng** `SHA-256 file không khớp` |
+| Thiếu scope | **400 đúng** `Phải chọn đúng một version hoặc change request` |
+
+Nghĩa là **validate hoạt động tốt**, lỗi nằm ở bước ghi storage/RAGFlow phía sau.
+Nhìn giống rò rỉ connection/handle: dùng được đúng 1 lần rồi cạn.
+
+**Điểm quan trọng:** lần upload thành công đó **ghi DB rồi mới lỗi** ở bước sau,
+để lại document + revision mồ côi với `status: "queued"` vĩnh viễn. File thật thì
+vẫn lưu đúng — tôi tải lại qua `/revisions/{id}/download` và **SHA-256 khớp 100%**
+với file gốc. Vậy nên xin bọc bước tạo revision trong transaction, hoặc cleanup
+khi bước sau fail — hiện tại user thấy tài liệu "đang xử lý" mãi mãi.
+
+### 0.1. `GET /documents` — filter `status`, `type`, `version_id` đều trả 500
+
+```
+GET /documents                    → 200
+GET /documents?page=1&limit=5     → 200
+GET /documents?q=api              → 200
+GET /documents?status=indexed     → 500   ← SYS_500
+GET /documents?type=application/pdf → 500 ← SYS_500
+GET /documents?version_id=<uuid>  → 500   ← SYS_500
+```
+
+Cả 3 filter này đều có trong Swagger. FE **tạm thời lọc ở client** và chỉ gửi
+`page`/`limit`/`q` để màn hình không vỡ — nhưng như vậy phân trang sẽ sai khi dữ
+liệu nhiều. Sửa xong báo FE một tiếng, tôi bật lại ngay (đã chừa sẵn chỗ).
+
+### 0.2. `POST /projects/{id}/retrieval` — có trong Swagger nhưng chưa deploy
+
+Trả về `404 page not found` (404 trần, không phải envelope JSON) trong khi
+`POST /versions` cùng project trả 201 bình thường → route chưa được đăng ký trên
+bản đang chạy.
+
+Đây là API của **màn Tra cứu — tính năng lõi**. FE đã map sẵn đường dẫn, chỉ chờ
+BE deploy. Xin xác nhận: đã lên kế hoạch deploy chưa, hay còn thiếu gì?
+
+### 0.3. `GET /documents` không trả revision → FE đang phải gọi N+1
+
+Response của list chỉ có `{id, title, description, version, ...}`. Nhưng **kích
+thước, định dạng, và trạng thái ingestion đều nằm ở revision**, nên bảng tài liệu
+không có gì để hiển thị ngoài cái tên.
+
+Hiện FE phải gọi thêm `GET /documents/{id}` cho **từng dòng** để lấy revision mới
+nhất — 20 tài liệu = 21 request. Chạy được nhưng rất tốn.
+
+**Xin bổ sung `latest_revision` vào mỗi phần tử của list:**
+
+```ts
+latest_revision: {
+  id: string; revision_no: number;
+  file_name: string; media_type: string; size_bytes: number;
+  status: string; ragflow_sync_status: string;
+  error_detail: string | null;
+}
+```
+
+Chỉ cần thế là bỏ được toàn bộ N+1.
+
+### 0.4. Chưa có API xoá version
+
+`POST /versions` tạo được, `GET /versions` liệt kê được, nhưng không có `DELETE`.
+Lúc test tôi tạo vài version nháp và giờ không xoá được (đang còn
+`v9.9.9-fe-probe`, `v9.9.8-probe2`, `v-fe-e2e-probe` trong project
+`Docs Hub Demo` — nhờ team xoá thẳng dưới DB giúp).
+
+### 0.5. Định dạng được chấp nhận — đã xác nhận
+
+Test thực tế cho kết quả khớp tài liệu. Ghi lại để FE và BE cùng chốt:
+
+- **Nhận:** TXT, Markdown, CSV, PDF (có text-layer), DOCX, XLSX
+- **Từ chối:** mọi định dạng khác → `REQ_400` với message liệt kê rõ danh sách
+- **Không nhận** `.doc` / `.xls` đời cũ (chỉ OOXML)
+
+FE đã chỉnh lại dropzone đúng danh sách này (trước đó đang cho chọn `.doc`).
+
+---
+
 ## P0 — Bug đang có trên production (phát hiện khi test thật 20/08/2026)
 
 Đã chạy toàn bộ 22 endpoint của `https://api.docshub.io.vn` qua BFF của FE bằng
@@ -224,9 +324,14 @@ Không gấp nhưng nên có trong kế hoạch.
 
 | # | Việc | Mức |
 |---|---|---|
+| 0.0 | `POST /documents/uploads` trả SYS_500 từ lần upload thứ 2 | **P0 (bug)** |
+| 0.1 | `GET /documents` filter `status`/`type`/`version_id` trả 500 | **P0 (bug)** |
+| 0.2 | `POST /retrieval` có trong Swagger nhưng chưa deploy (404) | **P0** |
+| 0.3 | `GET /documents` thiếu `latest_revision` → FE gọi N+1 | **P0** |
+| 0.4 | Chưa có `DELETE /versions/{id}` | P1 |
 | 0 | Presigned URL avatar trả `minio:9000` → browser không gọi được | **P0 (bug)** |
-| 1 | Module `document` (4 API + trạng thái index) | **P0** |
-| 2 | Module `chat` (2 API + cấu trúc citation) | **P0** |
+| 1 | ~~Module `document`~~ — BE đã làm xong, còn bug 0.0/0.1/0.3 | ✅ |
+| 2 | Module `chat`/`retrieval` — đã có trong Swagger, chờ deploy (0.2) | **P0** |
 | 3 | `GET /projects/{id}` | P1 |
 | 4 | 3 counter trong `ProjectResponse` | P1 |
 | 5 | Member list kèm tên/email user | P1 |
