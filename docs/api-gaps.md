@@ -1,348 +1,384 @@
-# Yêu cầu bổ sung API — docs-hub-api
+# Báo lỗi API — docs-hub-api
 
-Đối chiếu `tai-lieu-api-docs-hub.md` với FE đã dựng (7 màn hình). Phần `auth`,
-`user`, `project` đã map xong và chạy được. Tài liệu này liệt kê những gì còn
-thiếu để chạy thật, xếp theo mức độ chặn.
+Kết quả test trên `https://api.docshub.io.vn`, tài khoản `admin@local`, ngày
+21/08/2026. Toàn bộ endpoint có trong Swagger đã được gọi thử.
 
-Ghi chú chung: FE đã dùng đúng envelope `{success, data, error, meta}`, quy ước
-lỗi nghiệp vụ trả HTTP 200 kèm `success:false`, và phân trang qua
-`meta.pagination`. **Các API mới xin giữ nguyên các quy ước này.**
+Mỗi mục ghi rõ: endpoint, hiện tượng, và cách tái hiện.
 
 ---
 
-## P0 — Bug chặn hoàn toàn (test thật 21/08/2026, sau khi BE ra module document)
+## 1. `POST /internal/api/v1/projects/{id}/documents/uploads` — 500 từ lần upload thứ hai
 
-BE đã bổ sung **module `document`, `version` và `retrieval`** — cảm ơn team. Đã
-test lại toàn bộ bằng `admin@local` trên `https://api.docshub.io.vn`. Ba mục
-dưới đây đang chặn, xin ưu tiên.
+**Mức độ: nghiêm trọng — chặn toàn bộ tính năng upload.**
 
-### 0.0. `POST /documents/uploads` trả `SYS_500` — hỏng sau lần upload đầu tiên
-
-Đây là **bug nặng nhất hiện tại**. Lần upload đầu tiên thành công trọn vẹn; từ
-lần thứ hai trở đi mọi request đều trả:
+Lần upload đầu tiên sau khi service khởi động thì thành công. Từ lần thứ hai trở
+đi, **mọi** request đều trả:
 
 ```
-HTTP 500  {"code":"SYS_500","message":"Không thể tạo revision"}
+HTTP 500
+{"success":false,"data":null,
+ "error":{"code":"SYS_500","message":"Không thể tạo revision","retryable":false}}
 ```
 
-Đã thử và loại trừ hết các khả năng từ phía FE:
+### Đã thử để khoanh vùng
 
-| Thử | Kết quả |
-|---|---|
-| Đổi định dạng (TXT, MD, CSV, PDF, DOCX, XLSX) | 500 hết |
-| Đổi version (seeded / mới tạo qua API) | 500 hết |
-| Đổi project (cả 2 project seed) | 500 hết |
-| File `.bin` (định dạng sai) | **400 đúng** — validate vẫn chạy tốt |
-| Sai `sha256` | **400 đúng** `SHA-256 file không khớp` |
-| Thiếu scope | **400 đúng** `Phải chọn đúng một version hoặc change request` |
+| Thay đổi                                                   | Kết quả       |
+| ---------------------------------------------------------- | ------------- |
+| Đổi định dạng file (TXT, MD, CSV, PDF, DOCX, XLSX)          | 500 ở tất cả  |
+| Đổi sang version khác (version seed sẵn)                    | 500           |
+| Đổi sang version mới tạo qua `POST /versions`               | 500           |
+| Đổi sang project khác (`20000000-...-0001`, chưa từng dùng) | 500           |
 
-Nghĩa là **validate hoạt động tốt**, lỗi nằm ở bước ghi storage/RAGFlow phía sau.
-Nhìn giống rò rỉ connection/handle: dùng được đúng 1 lần rồi cạn.
+Không phụ thuộc file, version hay project.
 
-**Điểm quan trọng:** lần upload thành công đó **ghi DB rồi mới lỗi** ở bước sau,
-để lại document + revision mồ côi với `status: "queued"` vĩnh viễn. File thật thì
-vẫn lưu đúng — tôi tải lại qua `/revisions/{id}/download` và **SHA-256 khớp 100%**
-với file gốc. Vậy nên xin bọc bước tạo revision trong transaction, hoặc cleanup
-khi bước sau fail — hiện tại user thấy tài liệu "đang xử lý" mãi mãi.
+### Phần validate vẫn chạy đúng
 
-### 0.1. `GET /documents` — filter `status`, `type`, `version_id` đều trả 500
+| Trường hợp                                | Kết quả                                                                          |
+| ----------------------------------------- | -------------------------------------------------------------------------------- |
+| File `.bin` (định dạng không hỗ trợ)      | `400 REQ_400` — "Chỉ hỗ trợ TXT, Markdown, CSV, PDF text-layer, DOCX và XLSX"     |
+| `sha256` sai                              | `400 REQ_400` — "SHA-256 file không khớp"                                        |
+| Không truyền version lẫn change request   | `400 REQ_400` — "Phải chọn đúng một version hoặc change request"                 |
+| `project_version_id` không thuộc project  | `400 REQ_400` — "Scope không thuộc project"                                      |
+
+Các case 400 vẫn trả về đúng ngay cả khi case hợp lệ đang 500. Vậy lỗi **không
+nằm ở tầng validate**, mà ở bước ghi storage / gọi RAGFlow phía sau.
+
+Hiện tượng "chạy được đúng một lần rồi hỏng vĩnh viễn" thường là rò rỉ
+connection hoặc file handle không được giải phóng.
+
+### Vấn đề đi kèm: request lỗi vẫn ghi DB
+
+Ở lần upload thành công, thứ tự xử lý cho thấy vấn đề: bản ghi `document` và
+`revision` **đã commit vào DB** trước khi bước sau thất bại. Kết quả là revision
+kẹt ở `status: "queued"` vĩnh viễn — không tự chạy tiếp, và cũng không retry
+được vì:
 
 ```
-GET /documents                    → 200
-GET /documents?page=1&limit=5     → 200
-GET /documents?q=api              → 200
-GET /documents?status=indexed     → 500   ← SYS_500
-GET /documents?type=application/pdf → 500 ← SYS_500
-GET /documents?version_id=<uuid>  → 500   ← SYS_500
+POST /documents/{docId}/revisions/{revId}/retry
+→ {"code":"DOCUMENT_RETRY_INVALID","message":"Chỉ revision thất bại mới được retry"}
 ```
 
-Cả 3 filter này đều có trong Swagger. FE **tạm thời lọc ở client** và chỉ gửi
-`page`/`limit`/`q` để màn hình không vỡ — nhưng như vậy phân trang sẽ sai khi dữ
-liệu nhiều. Sửa xong báo FE một tiếng, tôi bật lại ngay (đã chừa sẵn chỗ).
+Revision đang ở `queued` chứ không phải `failed` nên bị từ chối.
 
-### 0.2. `POST /projects/{id}/retrieval` — có trong Swagger nhưng chưa deploy
+Đề nghị: bọc bước tạo revision trong transaction, hoặc rollback khi bước sau
+thất bại. Ngoài ra nên cho phép retry cả revision kẹt `queued` quá lâu.
 
-Trả về `404 page not found` (404 trần, không phải envelope JSON) trong khi
-`POST /versions` cùng project trả 201 bình thường → route chưa được đăng ký trên
-bản đang chạy.
+### Ghi chú: phần lưu file hoạt động đúng
 
-Đây là API của **màn Tra cứu — tính năng lõi**. FE đã map sẵn đường dẫn, chỉ chờ
-BE deploy. Xin xác nhận: đã lên kế hoạch deploy chưa, hay còn thiếu gì?
+Ở lần upload thành công, file lưu nguyên vẹn. Tải lại bằng
+`GET /revisions/{id}/download` rồi so sánh:
 
-### 0.3. `GET /documents` không trả revision → FE đang phải gọi N+1
-
-Response của list chỉ có `{id, title, description, version, ...}`. Nhưng **kích
-thước, định dạng, và trạng thái ingestion đều nằm ở revision**, nên bảng tài liệu
-không có gì để hiển thị ngoài cái tên.
-
-Hiện FE phải gọi thêm `GET /documents/{id}` cho **từng dòng** để lấy revision mới
-nhất — 20 tài liệu = 21 request. Chạy được nhưng rất tốn.
-
-**Xin bổ sung `latest_revision` vào mỗi phần tử của list:**
-
-```ts
-latest_revision: {
-  id: string; revision_no: number;
-  file_name: string; media_type: string; size_bytes: number;
-  status: string; ragflow_sync_status: string;
-  error_detail: string | null;
-}
+```
+File gốc: 8feca1b0a0cd5be7ff4290bddc4c79ef88e6716832ee249f0736f32d3333101e
+Tải về:   8feca1b0a0cd5be7ff4290bddc4c79ef88e6716832ee249f0736f32d3333101e
 ```
 
-Chỉ cần thế là bỏ được toàn bộ N+1.
-
-### 0.4. Chưa có API xoá version
-
-`POST /versions` tạo được, `GET /versions` liệt kê được, nhưng không có `DELETE`.
-Lúc test tôi tạo vài version nháp và giờ không xoá được (đang còn
-`v9.9.9-fe-probe`, `v9.9.8-probe2`, `v-fe-e2e-probe` trong project
-`Docs Hub Demo` — nhờ team xoá thẳng dưới DB giúp).
-
-### 0.5. Định dạng được chấp nhận — đã xác nhận
-
-Test thực tế cho kết quả khớp tài liệu. Ghi lại để FE và BE cùng chốt:
-
-- **Nhận:** TXT, Markdown, CSV, PDF (có text-layer), DOCX, XLSX
-- **Từ chối:** mọi định dạng khác → `REQ_400` với message liệt kê rõ danh sách
-- **Không nhận** `.doc` / `.xls` đời cũ (chỉ OOXML)
-
-FE đã chỉnh lại dropzone đúng danh sách này (trước đó đang cho chọn `.doc`).
+SHA-256 khớp 100%. Phần đọc/ghi object storage không có vấn đề.
 
 ---
 
-## P0 — Bug đang có trên production (phát hiện khi test thật 20/08/2026)
+## 2. `GET /internal/api/v1/projects/{id}/documents` — filter `status`, `type`, `version_id` trả 500
 
-Đã chạy toàn bộ 22 endpoint của `https://api.docshub.io.vn` qua BFF của FE bằng
-tài khoản `admin@local`. Ba module `auth`/`user`/`project` khớp tài liệu, kể cả
-các mã lỗi nghiệp vụ (`CONFIRM_NAME_MISMATCH`, `IMAGE_INVALID`, `FILE_TOO_LARGE`,
-`AVATAR_NOT_UPLOADED` đều trả đúng). Hai vấn đề dưới đây thì phải sửa ở BE.
+**Mức độ: cao.**
 
-### 0.1. `avatar/upload-url` trả hostname nội bộ Docker — luồng ảnh hỏng hoàn toàn
+Ba query param có trong Swagger nhưng gọi vào là 500:
 
-`POST /projects/{id}/avatar/upload-url` trả về:
+```
+GET /documents                          → 200
+GET /documents?page=1&limit=5           → 200
+GET /documents?q=api                    → 200
+GET /documents?status=indexed           → 500  SYS_500
+GET /documents?type=application/pdf     → 500  SYS_500
+GET /documents?version_id=<uuid hợp lệ> → 500  SYS_500
+```
+
+Mỗi param gây lỗi độc lập, không cần kết hợp. `page`, `limit`, `q` bình thường.
+
+Message trả về là lỗi chung "Đã có lỗi hệ thống. Vui lòng thử lại sau.", không
+phải lỗi validate — nhiều khả năng lỗi khi build câu query.
+
+---
+
+## 3. `POST /internal/api/v1/projects/{id}/retrieval` — có trong Swagger nhưng chưa deploy
+
+**Mức độ: cao — đây là API của tính năng tra cứu.**
+
+```
+POST /internal/api/v1/projects/{id}/retrieval
+→ 404 page not found
+```
+
+Trả về **404 dạng text trần**, không phải envelope JSON như các lỗi khác — dấu
+hiệu route chưa được đăng ký, chứ không phải resource không tồn tại.
+
+Để so sánh, cùng project và cùng token:
+
+```
+POST /internal/api/v1/projects/{id}/versions → 201 (bình thường)
+```
+
+Nên không phải vấn đề project hay xác thực. Xin xác nhận bản deploy hiện tại đã
+bao gồm route này chưa.
+
+---
+
+## 4. `POST /internal/api/v1/projects/{id}/avatar/upload-url` — presigned URL trỏ hostname nội bộ
+
+**Mức độ: cao — chặn toàn bộ luồng ảnh đại diện.**
+
+Endpoint trả về:
 
 ```
 http://minio:9000/document-hub/projects/{id}/avatar?X-Amz-Algorithm=...
 ```
 
-`minio` là service name trong Docker network, **trình duyệt không resolve được**
-(đã kiểm tra: không có bản ghi DNS công khai, `minio.docshub.io.vn` và
-`storage.docshub.io.vn` đều không tồn tại). Theo đúng tài liệu thì FE phải `PUT`
-thẳng file lên URL này từ browser — nên bước 2b sẽ luôn fail.
+Hai vấn đề:
 
-Thêm nữa scheme là `http`, trong khi FE chạy trên `https://docshub.io.vn`: kể cả
-khi host resolve được, browser vẫn chặn vì mixed content.
+1. **`minio` là service name trong Docker network.** Không có bản ghi DNS công
+   khai — đã kiểm tra `minio`, `minio.docshub.io.vn`, `storage.docshub.io.vn`,
+   `s3.docshub.io.vn`, không cái nào resolve được. Client bên ngoài không thể
+   PUT lên URL này.
+2. **Scheme là `http`** trong khi hệ thống chạy trên HTTPS.
 
-**Cần:** MinIO có endpoint công khai qua HTTPS, và presigned URL phải ký theo
-đúng public host đó (`MINIO_PUBLIC_ENDPOINT` hoặc tương đương), không phải
-`minio:9000`. Ký bằng host nội bộ rồi FE tự đổi host sẽ làm sai chữ ký.
+Lưu ý: không thể sửa host ở phía client, vì host nằm trong phần được ký — đổi
+host là chữ ký mất hiệu lực.
 
-### 0.2. Tài khoản seed `admin@local` không phải email hợp lệ
+Cần cấu hình MinIO có endpoint công khai qua HTTPS và ký presigned URL theo host
+đó (`MINIO_PUBLIC_ENDPOINT` hoặc tương đương).
 
-`username` của tài khoản mặc định là `admin@local` — thiếu TLD nên trượt mọi
-validate email chuẩn. FE đã xử lý phía mình (coi `username` là định danh đăng
-nhập, không validate như email). Nêu ra để BE biết: nếu có chỗ nào ràng buộc
-`username` phải là email thì tài khoản seed sẽ tự mâu thuẫn.
-
-### 0.3. Token JWT — xác nhận cách FE đang dùng
-
-Token BE ký có payload `{user_id, email, roles, iss, sub, exp, iat}` — không có
-`aud`, không có tên hiển thị. FE **không verify chữ ký** (không giữ secret của
-BE, và cũng không nên), chỉ decode để lấy `roles`/`email` cho việc render và
-điều hướng; mọi quyết định phân quyền vẫn do BE kiểm ở từng request.
-
-Nếu sau này BE muốn FE verify được, xin expose **JWKS endpoint** (RS256) thay vì
-chia sẻ secret HS256.
+`POST /documents/uploads/presign` trả về `http://minio:9000/...` — cùng vấn đề.
 
 ---
 
-## P0 — Chặn hẳn, không có thì màn hình không chạy được
+## 5. `POST /internal/api/v1/auth/logout` — không thu hồi token
 
-### 1. Module `document` (chưa có gì)
+**Mức độ: cao (bảo mật).**
 
-Chặn 2 màn: **Quản lý tài liệu** và **Tải dữ liệu**.
+Gọi logout trả về thành công, nhưng token cũ **vẫn dùng được bình thường**:
 
-| Method | Path đề xuất | Body / Query | Response |
-|---|---|---|---|
-| GET | `/internal/api/v1/projects/{id}/documents` | `page,limit,keyword,status,format` | `DocumentResponse[]` + phân trang |
-| POST | `/internal/api/v1/projects/{id}/documents` | multipart `file` | `DocumentResponse` (201) |
-| DELETE | `/internal/api/v1/projects/{id}/documents/{docId}` | — | 204 |
-| GET | `/internal/api/v1/projects/{id}/documents/{docId}/download` | — | file hoặc presigned URL |
-
-`DocumentResponse` FE đang cần:
-
-```ts
-{ id: string; project_id: string; name: string;
-  mime_type: string; size_bytes: number;
-  page_count: number | null;      // hiện ở dòng phụ "PDF · 24 trang"
-  chunk_count: number | null;      // cột "Số đoạn", null khi chưa index xong
-  status: "queued" | "processing" | "indexed" | "failed";
-  error_message: string | null;    // khi status = failed, để hiện lý do
-  updated_at: string }
+```
+POST /auth/logout        → 200 success
+GET  /auth/me (token cũ) → 200, vẫn trả về user
 ```
 
-**Câu hỏi cần chốt:**
-
-- **Upload qua backend hay presigned URL như avatar?** Nếu dùng presigned thì
-  cho luồng 3 bước giống avatar, FE làm y hệt được.
-- **FE biết khi nào index xong bằng cách nào?** Đây là câu quan trọng nhất, ảnh
-  hưởng trực tiếp tới code:
-  - (a) FE tự poll `GET /documents` mỗi vài giây → cần biết nên poll bao lâu 1 lần;
-  - (b) SSE/WebSocket đẩy trạng thái về;
-  - (c) hoặc có endpoint riêng kiểu `GET /documents/{id}/status` cho nhẹ.
-  Hiện FE đang giả định (a). Nếu BE làm (b) thì tốt hơn nhiều, đỡ tải server.
-- **Giới hạn dung lượng và định dạng thật là gì?** FE đang chặn client-side ở
-  20 MB và PDF/DOCX/TXT/MD — cần khớp với BE để không có file qua được FE mà BE
-  từ chối.
-
-Mã lỗi nghiệp vụ dự kiến cần: `FILE_TOO_LARGE`, `UNSUPPORTED_FORMAT`,
-`DUPLICATE_DOCUMENT` (nếu chặn trùng tên).
-
-### 2. Module `chat` (chưa có gì)
-
-Chặn màn **Tra cứu thông tin** — tính năng lõi của sản phẩm.
-
-| Method | Path đề xuất | Body / Query | Response |
-|---|---|---|---|
-| GET | `/internal/api/v1/projects/{id}/chat/history` | `page,limit` | `ChatMessageResponse[]` |
-| POST | `/internal/api/v1/projects/{id}/chat` | `{question}` | `ChatMessageResponse` |
-
-`ChatMessageResponse` FE đang cần:
-
-```ts
-{ id: string; role: "user" | "assistant"; content: string;
-  citations: Array<{
-    index: number;          // số [1] [2] xuất hiện trong content
-    document_id: string;
-    document_name: string;
-    page: number;
-    excerpt: string;        // đoạn trích để hiện ở panel bên phải
-  }>;
-  created_at: string }
-```
-
-**Câu hỏi cần chốt:**
-
-- **Có stream token không?** Nếu có (SSE) thì cho biết format sự kiện. FE hiện
-  làm request/response thường; đổi sang stream chỉ sửa 1 file `api/`.
-- **Trích dẫn đánh dấu trong `content` thế nào?** FE đang parse marker dạng
-  `[1]`, `[2]` và map với mảng `citations` theo `index`. Nếu BE dùng format khác
-  (vd `[^1]` hoặc tag riêng) thì báo sớm.
-- **Có xoá/sửa hội thoại không?** Chưa cần gấp.
+Token vẫn hợp lệ cho đến khi hết hạn theo `exp`. Nghĩa là logout hiện không có
+tác dụng thực sự về phía server — token bị lộ vẫn dùng được kể cả sau khi user
+đã đăng xuất.
 
 ---
 
-## P1 — Không chặn nhưng đang phải làm cách vòng, tốn request
+## 6. Không có refresh token — phiên hết hạn sau 15 phút
 
-### 3. `GET /internal/api/v1/projects/{id}` — lấy chi tiết 1 dự án
+**Mức độ: cao (trải nghiệm).**
 
-Hiện **không có**. Màn Tra cứu, Quản lý tài liệu và Cấu hình đều cần thông tin
-1 dự án cụ thể. FE đang phải gọi `GET /projects?limit=100` rồi lọc trong mảng —
-chạy được nhưng sai về mặt thiết kế và vỡ khi 1 user có trên 100 dự án.
+`POST /auth/login` chỉ trả về một `token` duy nhất, không có refresh token.
+Payload token decode ra:
 
-### 4. Counter trong `ProjectResponse`
-
-Thiếu 3 field, FE đang hiện dấu `—` thay vì số:
-
-```ts
-document_count: number;
-member_count: number;
-chunk_count: number;      // tổng số đoạn đã index, hiện ở tab Tổng quan
+```json
+{ "exp": 1787214108, "iat": 1787213208 }
 ```
 
-Card dự án ở màn chọn dự án và ô "Tổng quan" trong Cấu hình đều hiển thị các số
-này theo mockup.
+`exp - iat = 900` giây = **15 phút**. Hết 15 phút là phải đăng nhập lại, mất
+việc đang làm giữa chừng.
 
-### 5. `GET /projects/{id}/members` — trả kèm thông tin user
-
-Hiện chỉ có `user_id`. Bảng thành viên theo mockup hiển thị avatar + tên + chức
-danh, nên FE đang phải hiện `#a1b2c3d4` (id cắt ngắn).
-
-Xin bổ sung vào `ProjectMemberResponse`:
-
-```ts
-user: { id: string; full_name: string; email: string; job_title?: string }
-```
-
-Nếu không join được thì cho **`GET /users?ids=a,b,c`** (lấy nhiều user 1 lần) —
-FE tự ghép. Đừng để FE phải gọi `GET /users/{id}` từng người, 5 thành viên là 5
-request (N+1).
-
-### 6. Cấu hình dự án — thiếu field so với mockup
-
-`settings` hiện có `{model, top_k, chunk_size, allowed_formats}`. Màn Cấu hình
-theo mockup còn 5 mục nữa, FE đang hiện "Chưa hỗ trợ":
-
-```ts
-embedding_model: string;   // "Mô hình embedding"
-chunk_overlap: number;     // "Độ chồng lấn"
-audit_log: boolean;        // toggle "Ghi audit log truy cập tài liệu"
-members_only: boolean;     // toggle "Chỉ thành viên dự án được truy cập"
-allow_export: boolean;     // toggle "Cho phép xuất kết quả ra Word/Markdown"
-```
-
-Kèm theo: **API ghi settings**. Hiện `PATCH /projects/{id}` có nhận `settings`
-nhưng chưa rõ ghi được field nào — cần xác nhận, hoặc tách endpoint riêng.
-
-Nếu 3 toggle bảo mật chưa nằm trong kế hoạch thì báo để FE **bỏ hẳn khỏi UI**,
-đỡ hiển thị chức năng không tồn tại.
+Đề nghị bổ sung refresh token + `POST /auth/refresh`, lưu refresh token trong DB
+để thu hồi được — đồng thời giải quyết luôn mục 5 ở trên.
 
 ---
 
-## P2 — Nên có, ảnh hưởng trải nghiệm
+## 7. `GET /internal/api/v1/projects/{id}/documents` — response thiếu thông tin revision
 
-### 7. Refresh token
+**Mức độ: trung bình — không lỗi, nhưng gây tải không cần thiết.**
 
-Login chỉ trả 1 `token`. Token hết hạn là user bị đá về màn đăng nhập giữa chừng,
-mất việc đang làm. Xin bổ sung refresh token + `POST /auth/refresh`, hoặc cho
-biết **thời hạn token** để FE cảnh báo trước khi hết.
+Response hiện tại của mỗi document:
 
-### 8. `status` của dự án — giá trị hợp lệ
+```json
+{
+  "id": "...",
+  "project_id": "...",
+  "title": "...",
+  "description": "...",
+  "document_key": "...",
+  "version": 1,
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
 
-Tài liệu ghi `status: string` không liệt kê giá trị. FE đang giả định
-`active | archived`. Xin xác nhận danh sách đầy đủ (dùng `oneof` như các field
-khác).
+Không có thông tin file: tên file, dung lượng, MIME type, trạng thái ingestion —
+tất cả đều nằm ở revision, mà list không trả revision.
 
-### 9. RBAC
+Hệ quả: muốn biết trạng thái của N document phải gọi thêm N request
+`GET /documents/{id}`. 20 document = 21 request.
 
-Tài liệu ghi rõ **RBAC đang tắt** — mọi user đăng nhập đều sửa/xóa được dự án
-của người khác. FE chưa ẩn nút theo quyền vì chưa có thông tin vai trò của user
-hiện tại trong dự án.
+**Đề nghị bổ sung `latest_revision` vào từng phần tử:**
 
-Khi bật RBAC, xin cho biết vai trò của người đang đăng nhập ở mỗi dự án — thêm
-`my_role: "owner"|"editor"|"viewer"` vào `ProjectResponse` là gọn nhất. FE sẽ ẩn
-nút theo đó.
-
-### 10. Cho phép đổi chủ dự án
-
-Tài liệu ghi owner cố định từ lúc tạo. Thực tế người ta nghỉ việc / chuyển team.
-Không gấp nhưng nên có trong kế hoạch.
+```json
+"latest_revision": {
+  "id": "...",
+  "revision_no": 1,
+  "file_name": "bao_cao.xlsx",
+  "media_type": "application/vnd...spreadsheetml.sheet",
+  "size_bytes": 16092,
+  "status": "ready",
+  "ragflow_sync_status": "pending",
+  "error_detail": null
+}
+```
 
 ---
 
-## Tóm tắt cho BE
+## 8. Thiếu `DELETE /internal/api/v1/projects/{id}/versions/{versionId}`
 
-| # | Việc | Mức |
-|---|---|---|
-| 0.0 | `POST /documents/uploads` trả SYS_500 từ lần upload thứ 2 | **P0 (bug)** |
-| 0.1 | `GET /documents` filter `status`/`type`/`version_id` trả 500 | **P0 (bug)** |
-| 0.2 | `POST /retrieval` có trong Swagger nhưng chưa deploy (404) | **P0** |
-| 0.3 | `GET /documents` thiếu `latest_revision` → FE gọi N+1 | **P0** |
-| 0.4 | Chưa có `DELETE /versions/{id}` | P1 |
-| 0 | Presigned URL avatar trả `minio:9000` → browser không gọi được | **P0 (bug)** |
-| 1 | ~~Module `document`~~ — BE đã làm xong, còn bug 0.0/0.1/0.3 | ✅ |
-| 2 | Module `chat`/`retrieval` — đã có trong Swagger, chờ deploy (0.2) | **P0** |
-| 3 | `GET /projects/{id}` | P1 |
-| 4 | 3 counter trong `ProjectResponse` | P1 |
-| 5 | Member list kèm tên/email user | P1 |
-| 6 | 5 field settings còn thiếu + API ghi settings | P1 |
-| 7 | Refresh token | P2 |
-| 8 | Chốt giá trị `status` dự án | P2 |
-| 9 | `my_role` khi bật RBAC | P2 |
-| 10 | Đổi chủ dự án | P2 |
+**Mức độ: trung bình.**
 
-**Câu hỏi cần trả lời sớm nhất** (ảnh hưởng cách FE viết code, không chỉ là thêm field):
+Có `POST /versions` (tạo) và `GET /versions` (liệt kê), nhưng không có endpoint
+xoá. Version tạo nhầm không gỡ được bằng API.
 
-1. Tài liệu upload: qua backend hay presigned URL?
-2. FE biết index xong bằng cách nào — poll, SSE, hay WebSocket?
-3. Chat có stream không?
+Hiện trong project `Docs Hub Demo` (`10000000-0000-4000-8000-000000000001`) còn
+3 version nháp tạo lúc test, nhờ team xoá trực tiếp dưới DB:
+
+- `v9.9.9-fe-probe`
+- `v9.9.8-probe2`
+- `v-fe-e2e-probe`
+
+---
+
+## 9. Thiếu `GET /internal/api/v1/projects/{id}` — lấy chi tiết một project
+
+**Mức độ: trung bình.**
+
+Chỉ có `GET /projects` (danh sách). Muốn lấy thông tin một project cụ thể phải
+gọi danh sách rồi tự lọc — sai khi số project vượt quá `limit`.
+
+---
+
+## 10. `ProjectResponse` thiếu các counter
+
+**Mức độ: thấp.**
+
+Không có `document_count`, `member_count`, `chunk_count`. Muốn hiển thị các số
+này phải gọi thêm nhiều endpoint và tự đếm.
+
+---
+
+## 11. `GET /internal/api/v1/projects/{id}/members` — chỉ trả `user_id`
+
+**Mức độ: thấp.**
+
+`ProjectMemberResponse` chỉ có `user_id`, không có tên hay email. Muốn hiển thị
+danh sách thành viên phải gọi `GET /users/{id}` cho từng người — 5 thành viên là
+5 request.
+
+Đề nghị join sẵn:
+
+```json
+"user": { "id": "...", "full_name": "...", "email": "...", "job_title": "..." }
+```
+
+Hoặc nếu không join được thì cho `GET /users?ids=a,b,c` để lấy nhiều user một lần.
+
+---
+
+## 12. Tài khoản seed `admin@local` không phải email hợp lệ
+
+**Mức độ: thấp — ghi nhận để tránh mâu thuẫn về sau.**
+
+`username` của tài khoản mặc định là `admin@local`, thiếu phần TLD nên không qua
+được validate email theo chuẩn. Nếu về sau có ràng buộc `username` phải là email
+hợp lệ thì chính tài khoản seed sẽ không đăng nhập được.
+
+---
+
+## 13. JWT thiếu thông tin; `roles` trả về dạng chuỗi JSON
+
+**Mức độ: thấp — đề xuất.**
+
+Payload token hiện tại:
+
+```json
+{
+  "user_id": "...",
+  "email": "admin@local",
+  "roles": "[...]",
+  "iss": "docs-hub-api",
+  "sub": "...",
+  "exp": 0,
+  "iat": 0
+}
+```
+
+Hai ghi chú:
+
+1. Không có claim tên hiển thị, nên chỉ có `username` để hiển thị.
+2. `roles` trong response của `POST /auth/login` là **chuỗi JSON**, không phải
+   mảng — phải parse hai lần. Trả thẳng mảng sẽ nhất quán hơn.
+
+Nếu muốn bên gọi verify được chữ ký, đề nghị expose **JWKS endpoint** (RS256)
+thay vì chia sẻ secret HS256.
+
+---
+
+## 14. `status` của project — chưa rõ tập giá trị hợp lệ
+
+**Mức độ: thấp.**
+
+Tài liệu ghi `status: string` nhưng không liệt kê giá trị. Xin xác nhận danh
+sách đầy đủ (dùng `oneof` như các field khác). Hiện quan sát được `active`.
+
+---
+
+## Phụ lục — đã test và hoạt động đúng
+
+Ghi lại để khoanh vùng, các phần này không cần sửa.
+
+### Định dạng file được chấp nhận
+
+Đã xác nhận bằng test thực tế:
+
+- **Nhận:** TXT, Markdown, CSV, PDF (có text-layer), DOCX, XLSX
+- **Từ chối:** các định dạng khác, trả `REQ_400` kèm message liệt kê rõ
+- **Không nhận** `.doc` / `.xls` đời cũ (chỉ nhận OOXML)
+
+### Endpoint hoạt động đúng
+
+| Nhóm     | Endpoint                                                                     |
+| -------- | ---------------------------------------------------------------------------- |
+| auth     | `POST /auth/login`, `GET /auth/me`                                           |
+| user     | list, create, detail, update, update status, delete, check-email             |
+| project  | list, create, update, delete, members (list/invite/accept/change role/remove) |
+| version  | `GET /versions`, `POST /versions`                                            |
+| document | `GET /documents` (không filter), `GET /documents/{id}`, `PATCH`, `DELETE`    |
+| revision | `/status`, `/download`, `/view`                                              |
+
+Các mã lỗi nghiệp vụ trả về đúng như tài liệu: `CONFIRM_NAME_MISMATCH`,
+`IMAGE_INVALID`, `FILE_TOO_LARGE`, `AVATAR_NOT_UPLOADED`, `ALREADY_MEMBER`,
+`INVITE_NOT_PENDING`, `CANNOT_MODIFY_OWNER`, `CONFLICT_VERSION`,
+`DUPLICATE_EMAIL`, `AUTH_401`, `DOCUMENT_RETRY_INVALID`, `NOT_FOUND`.
+
+Envelope `{success, data, error, meta}`, quy ước lỗi nghiệp vụ trả HTTP 200 kèm
+`success:false`, và `meta.pagination` đều nhất quán.
+
+Luồng thành viên đã test đủ vòng: tạo user → tạo project → mời (pending) →
+accept (active, có `joined_at`) → đổi role → xoá (204).
+
+---
+
+## Tổng hợp
+
+| #   | Endpoint / vấn đề                                                        | Mức độ          |
+| --- | ------------------------------------------------------------------------ | --------------- |
+| 1   | `POST /documents/uploads` — 500 từ lần thứ 2; request lỗi vẫn ghi DB     | **Nghiêm trọng** |
+| 2   | `GET /documents` — filter `status`/`type`/`version_id` trả 500           | Cao             |
+| 3   | `POST /retrieval` — 404, chưa deploy                                     | Cao             |
+| 4   | `avatar/upload-url` + `uploads/presign` — trả host nội bộ `minio:9000`   | Cao             |
+| 5   | `POST /auth/logout` — không thu hồi token                                | Cao             |
+| 6   | Không có refresh token, phiên chỉ 15 phút                                | Cao             |
+| 7   | `GET /documents` — thiếu `latest_revision`, gây N+1                      | Trung bình      |
+| 8   | Thiếu `DELETE /versions/{id}`                                            | Trung bình      |
+| 9   | Thiếu `GET /projects/{id}`                                               | Trung bình      |
+| 10  | `ProjectResponse` thiếu `document_count` / `member_count` / `chunk_count` | Thấp            |
+| 11  | `GET /members` chỉ trả `user_id`, không có tên/email                     | Thấp            |
+| 12  | Tài khoản seed `admin@local` không phải email hợp lệ                     | Thấp            |
+| 13  | JWT thiếu tên hiển thị; `roles` trả về dạng chuỗi JSON                   | Thấp            |
+| 14  | Chưa chốt tập giá trị `status` của project                               | Thấp            |
