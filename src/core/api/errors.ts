@@ -6,10 +6,28 @@ import { z } from 'zod';
  * truth; MSW handlers build responses with the same helpers so mocks can never
  * drift from the contract.
  */
-export const ApiMetaSchema = z.object({
-  requestId: z.string(),
-  timestamp: z.string(),
-});
+/**
+ * Envelope metadata.
+ *
+ * Two producers write this shape and they disagree on casing: docs-hub-api sends
+ * snake_case (`request_id`, plus `trace_id` and `pagination`), while this app's
+ * own route handlers use `successEnvelope`, which emits camelCase. Accepting both
+ * — and normalising to `requestId` — is what lets one client parse either.
+ *
+ * Requiring only `timestamp` is deliberate: a missing correlation id is worth a
+ * degraded log line, never a thrown parse that blanks the screen.
+ */
+export const ApiMetaSchema = z
+  .object({
+    requestId: z.string().optional(),
+    request_id: z.string().optional(),
+    timestamp: z.string(),
+  })
+  .loose()
+  .transform(({ requestId, request_id, ...rest }) => ({
+    ...rest,
+    requestId: requestId ?? request_id ?? '',
+  }));
 
 export const ApiErrorBodySchema = z.object({
   code: z.string(),

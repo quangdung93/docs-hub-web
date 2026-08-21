@@ -27,6 +27,19 @@ export const http: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+/**
+ * FormData must NOT carry the instance-wide JSON content type: multipart needs a
+ * `boundary=...` parameter, which only the browser can generate. Deleting the
+ * header here lets it set `multipart/form-data; boundary=…` itself. Without this
+ * every file upload reaches the server with an unparseable body.
+ */
+http.interceptors.request.use((config) => {
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+  return config;
+});
+
 http.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => Promise.reject(normalizeAxiosError(error))
