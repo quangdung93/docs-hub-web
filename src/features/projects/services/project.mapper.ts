@@ -7,9 +7,10 @@ import type { Project, ProjectMember, ProjectSettings } from '../schemas/project
  * Two things the backend does not send yet, handled explicitly rather than
  * silently defaulted:
  *
- *  - **Counters** (`documentCount`, `memberCount`, `chunkCount`) are not on
- *    ProjectResponse. They come back `null`, and the UI renders "—" instead of a
- *    fabricated 0, which would read as "this project is empty".
+ *  - **Counters** (`documentCount`, `memberCount`, `chunkCount`) are sent by the
+ *    read endpoints but not the write ones, so they stay nullable: a create or
+ *    update response renders "—" rather than a fabricated 0, which would read as
+ *    "this project is empty".
  *  - **Owner name** is not on ProjectResponse either — only `owner_id`. Resolving
  *    it needs a separate user lookup, so it stays null until the backend joins it
  *    or we add that call.
@@ -25,9 +26,9 @@ export function toProject(dto: ProjectDto): Project {
     imageUrl: dto.avatar_url ?? null,
     ownerId: dto.owner_id,
     ownerName: null,
-    documentCount: null,
-    memberCount: null,
-    chunkCount: null,
+    documentCount: dto.document_count ?? null,
+    memberCount: dto.member_count ?? null,
+    chunkCount: dto.chunk_count ?? null,
     createdAt: dto.created_at,
   };
 }

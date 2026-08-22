@@ -24,6 +24,10 @@ export const ProjectDtoSchema = z.object({
   settings: ProjectSettingsDtoSchema.nullish(),
   /** Presigned GET URL — expires, so it is never cached beyond the render. */
   avatar_url: z.string().nullish(),
+  /** Present on `GET /projects` and `GET /projects/{id}`; absent on write responses. */
+  document_count: z.number().int().nullish(),
+  member_count: z.number().int().nullish(),
+  chunk_count: z.number().int().nullish(),
   created_at: z.string(),
 });
 

@@ -1,4 +1,4 @@
-import { endpoints, unwrap, unwrapPaginated, type Paginated } from '@/core/api';
+import { AppError, endpoints, unwrap, unwrapPaginated, type Paginated } from '@/core/api';
 import { http } from '@/shared/api/http';
 
 import { toProject, toProjectMember, toProjectSettings } from '../services/project.mapper';
@@ -30,13 +30,17 @@ export const projectsApi = {
   },
 
   /**
-   * There is no `GET /projects/{id}` in the API. Until one exists, the detail
-   * screens resolve a project by scanning the list — correct but O(pages), so
-   * replace this the moment the endpoint lands.
+   * Fetch one project. Returns undefined for a missing id rather than throwing,
+   * so a detail screen can render "not found" instead of an error boundary.
    */
   detail: async (projectId: string, signal?: AbortSignal): Promise<Project | undefined> => {
-    const { items } = await projectsApi.list({ limit: 100 }, signal);
-    return items.find((project) => project.id === projectId);
+    try {
+      const { data } = await http.get(endpoints.projects.detail(projectId), { signal });
+      return toProject(unwrap(data, ProjectDtoSchema));
+    } catch (error) {
+      if (error instanceof AppError && error.status === 404) return undefined;
+      throw error;
+    }
   },
 
   create: async (input: CreateProjectInput): Promise<Project> => {

@@ -3,7 +3,12 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import { failureEnvelope, successEnvelope } from '@/core/api/errors';
 import { endpoints } from '@/core/api/endpoints';
-import { ACCESS_COOKIE, accessCookieOptions } from '@/core/auth/cookies';
+import {
+  ACCESS_COOKIE,
+  REFRESH_COOKIE,
+  accessCookieOptions,
+  refreshCookieOptions,
+} from '@/core/auth/cookies';
 import { serverEnv } from '@/core/config/env';
 import { LoginResultDtoSchema } from '@/features/auth/api/auth.dto';
 import { LoginInputSchema } from '@/features/auth/schemas/login.schema';
@@ -13,8 +18,10 @@ import { LoginInputSchema } from '@/features/auth/schemas/login.schema';
  * backend directly); this handler exchanges them for a token and writes it into
  * an httpOnly cookie, returning only the safe user object. Tokens never touch JS.
  *
- * docs-hub-api issues a SINGLE token with no refresh counterpart, so there is no
- * refresh cookie to set: when it expires the user signs in again.
+ * The backend returns a short-lived access token plus a `refresh_token`; both go
+ * into httpOnly cookies here, and the middleware renews them silently. A backend
+ * build that omits the refresh token still works — the session simply ends when
+ * the access token expires.
  */
 export async function POST(req: NextRequest) {
   const input = LoginInputSchema.safeParse(await req.json().catch(() => null));
@@ -61,9 +68,10 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const { user, token } = parsed.data;
+  const { user, token, refresh_token: refreshToken } = parsed.data;
   const jar = await cookies();
   jar.set(ACCESS_COOKIE, token, accessCookieOptions());
+  if (refreshToken) jar.set(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
 
   return NextResponse.json(
     successEnvelope({

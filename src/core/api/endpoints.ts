@@ -19,6 +19,7 @@ export const endpoints = {
 
   auth: {
     login: `${PUBLIC}/auth/login`,
+    refresh: `${PUBLIC}/auth/refresh`,
     logout: `${INTERNAL}/auth/logout`,
     me: `${INTERNAL}/auth/me`,
   },
@@ -36,6 +37,7 @@ export const endpoints = {
   projects: {
     list: `${INTERNAL}/projects`,
     create: `${INTERNAL}/projects`,
+    detail: (projectId: string) => `${INTERNAL}/projects/${projectId}`,
     update: (projectId: string) => `${INTERNAL}/projects/${projectId}`,
     remove: (projectId: string) => `${INTERNAL}/projects/${projectId}`,
     avatarUploadUrl: (projectId: string) => `${INTERNAL}/projects/${projectId}/avatar/upload-url`,

@@ -1,9 +1,28 @@
 # Báo lỗi API — docs-hub-api
 
-Kết quả test trên `https://api.docshub.io.vn`, tài khoản `admin@local`, ngày
-21/08/2026. Toàn bộ endpoint có trong Swagger đã được gọi thử.
+Kết quả test trên `https://api.docshub.io.vn`. Toàn bộ endpoint có trong Swagger
+đã được gọi thử. Mỗi mục ghi rõ: endpoint, hiện tượng, và cách tái hiện.
 
-Mỗi mục ghi rõ: endpoint, hiện tượng, và cách tái hiện.
+**Cập nhật 22/08/2026** — sau bản deploy mới, đã test lại toàn bộ bằng tài khoản
+`admin@docshub.io.vn`. Kết quả:
+
+**Đã sửa (7 mục):**
+
+| Mục cũ | Nội dung | Kiểm chứng |
+| ------ | -------- | ---------- |
+| 4 | Presigned URL trỏ `minio:9000` | Giờ trả `https://storage.docshub.io.vn/...`, host resolve được công khai (54.169.77.101), đúng HTTPS. Cả avatar lẫn document presign. |
+| 5 | Logout không thu hồi token | Gọi `/auth/me` bằng token cũ sau logout → **401**. Đã đúng. |
+| 6 | Không có refresh token | `POST /auth/refresh` đã có; login trả `refresh_token` + `expires_in: 900`; refresh rotate token mới đúng. |
+| 9 | Thiếu `GET /projects/{id}` | Đã deploy, trả về kèm counters. |
+| 10 | Thiếu counter | Đã có `document_count`, `member_count`, `chunk_count`. |
+| 12 | `admin@local` không phải email | Tài khoản đổi thành `admin@docshub.io.vn`. |
+| 13 | `roles` là chuỗi JSON | Giờ trả về **mảng thật**, có thêm `full_name`. |
+
+**Còn lại (3 mục):** 1, 2, 3 dưới đây — đã tái hiện lại ngày 22/08, vẫn nguyên.
+Mục 7 (thiếu `latest_revision`) và 8, 11, 14 vẫn là đề xuất chưa làm.
+
+Lưu ý: `POST /public/api/v1/auth/dev-token` giờ trả 404 (trước có). Nếu là chủ ý
+thì bỏ qua, còn nếu vẫn cần cho môi trường local thì xin bật lại.
 
 ---
 
@@ -122,9 +141,13 @@ bao gồm route này chưa.
 
 ---
 
-## 4. `POST /internal/api/v1/projects/{id}/avatar/upload-url` — presigned URL trỏ hostname nội bộ
+## 4. ~~Presigned URL trỏ hostname nội bộ~~ ✅ ĐÃ SỬA
 
-**Mức độ: cao — chặn toàn bộ luồng ảnh đại diện.**
+**Đã kiểm chứng 22/08: cả `avatar/upload-url` và `documents/uploads/presign` đều
+trả `https://storage.docshub.io.vn/...`. Host resolve được công khai và chạy
+HTTPS. Mục này khép lại.**
+
+Nội dung cũ giữ lại để đối chiếu:
 
 Endpoint trả về:
 
@@ -150,9 +173,11 @@ Cần cấu hình MinIO có endpoint công khai qua HTTPS và ký presigned URL 
 
 ---
 
-## 5. `POST /internal/api/v1/auth/logout` — không thu hồi token
+## 5. ~~`POST /internal/api/v1/auth/logout` — không thu hồi token~~ ✅ ĐÃ SỬA
 
-**Mức độ: cao (bảo mật).**
+**Đã kiểm chứng 22/08: token cũ trả 401 sau khi logout. Mục này khép lại.**
+
+Nội dung cũ giữ lại để đối chiếu:
 
 Gọi logout trả về thành công, nhưng token cũ **vẫn dùng được bình thường**:
 
@@ -167,9 +192,12 @@ tác dụng thực sự về phía server — token bị lộ vẫn dùng đư�
 
 ---
 
-## 6. Không có refresh token — phiên hết hạn sau 15 phút
+## 6. ~~Không có refresh token~~ ✅ ĐÃ SỬA
 
-**Mức độ: cao (trải nghiệm).**
+**Đã kiểm chứng 22/08: `POST /public/api/v1/auth/refresh` hoạt động, nhận
+`{"refresh_token": "..."}` và trả về cặp token mới, refresh token cũ bị thu hồi.**
+
+Nội dung cũ giữ lại để đối chiếu:
 
 `POST /auth/login` chỉ trả về một `token` duy nhất, không có refresh token.
 Payload token decode ra:
@@ -244,18 +272,22 @@ Hiện trong project `Docs Hub Demo` (`10000000-0000-4000-8000-000000000001`) c�
 
 ---
 
-## 9. Thiếu `GET /internal/api/v1/projects/{id}` — lấy chi tiết một project
+## 9. ~~Thiếu `GET /projects/{id}`~~ ✅ ĐÃ SỬA
 
-**Mức độ: trung bình.**
+**Đã deploy, trả về kèm cả 3 counter.**
+
+Nội dung cũ:
 
 Chỉ có `GET /projects` (danh sách). Muốn lấy thông tin một project cụ thể phải
 gọi danh sách rồi tự lọc — sai khi số project vượt quá `limit`.
 
 ---
 
-## 10. `ProjectResponse` thiếu các counter
+## 10. ~~`ProjectResponse` thiếu các counter~~ ✅ ĐÃ SỬA
 
-**Mức độ: thấp.**
+**Đã có `document_count`, `member_count`, `chunk_count`.**
+
+Nội dung cũ:
 
 Không có `document_count`, `member_count`, `chunk_count`. Muốn hiển thị các số
 này phải gọi thêm nhiều endpoint và tự đếm.
@@ -280,9 +312,11 @@ Hoặc nếu không join được thì cho `GET /users?ids=a,b,c` để lấy nh
 
 ---
 
-## 12. Tài khoản seed `admin@local` không phải email hợp lệ
+## 12. ~~Tài khoản seed `admin@local`~~ ✅ ĐÃ SỬA
 
-**Mức độ: thấp — ghi nhận để tránh mâu thuẫn về sau.**
+**Đổi thành `admin@docshub.io.vn`.**
+
+Nội dung cũ:
 
 `username` của tài khoản mặc định là `admin@local`, thiếu phần TLD nên không qua
 được validate email theo chuẩn. Nếu về sau có ràng buộc `username` phải là email
@@ -290,9 +324,10 @@ hợp lệ thì chính tài khoản seed sẽ không đăng nhập được.
 
 ---
 
-## 13. JWT thiếu thông tin; `roles` trả về dạng chuỗi JSON
+## 13. `roles` dạng chuỗi JSON ✅ ĐÃ SỬA — JWT vẫn thiếu tên hiển thị
 
-**Mức độ: thấp — đề xuất.**
+**`roles` giờ là mảng thật và response login có `full_name`. Phần JWKS bên dưới
+vẫn là đề xuất mở.**
 
 Payload token hiện tại:
 
@@ -371,14 +406,14 @@ accept (active, có `joined_at`) → đổi role → xoá (204).
 | 1   | `POST /documents/uploads` — 500 từ lần thứ 2; request lỗi vẫn ghi DB     | **Nghiêm trọng** |
 | 2   | `GET /documents` — filter `status`/`type`/`version_id` trả 500           | Cao             |
 | 3   | `POST /retrieval` — 404, chưa deploy                                     | Cao             |
-| 4   | `avatar/upload-url` + `uploads/presign` — trả host nội bộ `minio:9000`   | Cao             |
-| 5   | `POST /auth/logout` — không thu hồi token                                | Cao             |
-| 6   | Không có refresh token, phiên chỉ 15 phút                                | Cao             |
+| ~~4~~ | ~~Presigned URL trả host nội bộ `minio:9000`~~                          | ✅ đã sửa       |
+| ~~5~~ | ~~`POST /auth/logout` không thu hồi token~~                             | ✅ đã sửa       |
+| ~~6~~ | ~~Không có refresh token~~                                             | ✅ đã sửa       |
 | 7   | `GET /documents` — thiếu `latest_revision`, gây N+1                      | Trung bình      |
 | 8   | Thiếu `DELETE /versions/{id}`                                            | Trung bình      |
-| 9   | Thiếu `GET /projects/{id}`                                               | Trung bình      |
-| 10  | `ProjectResponse` thiếu `document_count` / `member_count` / `chunk_count` | Thấp            |
+| ~~9~~ | ~~Thiếu `GET /projects/{id}`~~                                          | ✅ đã sửa       |
+| ~~10~~ | ~~Thiếu counter trong `ProjectResponse`~~                             | ✅ đã sửa       |
 | 11  | `GET /members` chỉ trả `user_id`, không có tên/email                     | Thấp            |
-| 12  | Tài khoản seed `admin@local` không phải email hợp lệ                     | Thấp            |
-| 13  | JWT thiếu tên hiển thị; `roles` trả về dạng chuỗi JSON                   | Thấp            |
+| ~~12~~ | ~~Tài khoản seed `admin@local`~~                                       | ✅ đã sửa       |
+| ~~13~~ | ~~`roles` dạng chuỗi JSON~~ (JWKS vẫn là đề xuất mở)                  | ✅ đã sửa       |
 | 14  | Chưa chốt tập giá trị `status` của project                               | Thấp            |

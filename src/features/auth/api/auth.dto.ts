@@ -3,10 +3,9 @@ import { z } from 'zod';
 /**
  * Wire contracts for the auth module.
  *
- * `roles` arrives as a **raw JSON string** (e.g. `"[\"admin\"]"`), not an array —
- * documented backend behaviour. Parsing it here keeps that quirk at the edge, so
- * nothing downstream has to know about it. A malformed value degrades to an empty
- * list rather than breaking sign-in.
+ * `roles` historically arrived as a raw JSON string (`"[\"admin\"]"`) and now
+ * arrives as a real array. Both are accepted so a rollback on either side cannot
+ * break sign-in; a malformed value degrades to an empty list.
  */
 const RolesSchema = z
   .union([z.string(), z.array(z.string())])
@@ -30,10 +29,26 @@ export const AuthUserDtoSchema = z.object({
   created_at: z.string().nullish(),
 });
 
+/**
+ * `POST /auth/login` and `POST /auth/refresh` return the same token payload:
+ * a short-lived access `token` plus the `refresh_token` that renews it.
+ * `refresh_token` stays optional so the app still works against a backend build
+ * that predates it — the user just signs in again when the access token expires.
+ */
 export const LoginResultDtoSchema = z.object({
   user: AuthUserDtoSchema,
   token: z.string(),
+  refresh_token: z.string().nullish(),
+  expires_in: z.number().int().nullish(),
+});
+
+/** `POST /auth/refresh` — same tokens, without the user object. */
+export const RefreshResultDtoSchema = z.object({
+  token: z.string(),
+  refresh_token: z.string().nullish(),
+  expires_in: z.number().int().nullish(),
 });
 
 export type AuthUserDto = z.infer<typeof AuthUserDtoSchema>;
 export type LoginResultDto = z.infer<typeof LoginResultDtoSchema>;
+export type RefreshResultDto = z.infer<typeof RefreshResultDtoSchema>;
