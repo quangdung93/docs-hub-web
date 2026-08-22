@@ -26,6 +26,81 @@ thì bỏ qua, còn nếu vẫn cần cho môi trường local thì xin bật l�
 
 ---
 
+# ⚠️ Kiểm tra lại chiều 22/08/2026 — 2 vấn đề mới
+
+## A. Swagger đã có module chat nhưng **service chưa deploy** — cả 5 endpoint đều 404
+
+Swagger hiện có 43 endpoint (sáng nay 39). 5 endpoint mới:
+
+```
+GET  /internal/api/v1/projects/{id}/conversations
+POST /internal/api/v1/projects/{id}/conversations
+GET  /internal/api/v1/projects/{id}/conversations/{conversation_id}
+POST /internal/api/v1/projects/{id}/conversations/{conversation_id}/messages
+POST /internal/api/v1/projects/{id}/search        (thay cho /retrieval cũ)
+```
+
+**Gọi thử cả 5 → đều trả `404 page not found`** (404 text trần, không phải
+envelope JSON). Trong khi cùng lúc, cùng token, cùng project:
+
+```
+GET /internal/api/v1/projects          → 200
+GET /internal/api/v1/projects/{id}/versions → 200
+```
+
+Nên không phải vấn đề token hay project — **bản đang chạy trên
+`api.docshub.io.vn` cũ hơn file Swagger**. Có vẻ Swagger được generate và publish
+nhưng binary chưa được deploy lên. Nhờ team deploy lại giúp.
+
+Ghi chú: `POST /retrieval` cũ đã bị gỡ khỏi Swagger, thay bằng `POST /search`.
+Contract cũng đổi — field `question` → `query`, và `scope` giờ là **bắt buộc**
+(có `mode`, `version_ids`, `change_request_ids`). Xin cho biết `mode` nhận những
+giá trị nào (đoán là `all` / `version` / `change_request`?) vì Swagger chỉ ghi
+`type: string`, không liệt kê.
+
+## B. Upload giờ lỗi **ngay từ lần đầu** — nặng hơn hôm qua
+
+Hôm qua: lần 1 thành công, từ lần 2 mới 500. Hôm nay: **cả 3/3 lần đều 500**.
+
+```
+lần 1 → SYS_500 "Không thể tạo revision"
+lần 2 → SYS_500 "Không thể tạo revision"
+lần 3 → SYS_500 "Không thể tạo revision"
+```
+
+### Đã khoanh vùng: lỗi KHÔNG nằm ở storage
+
+Thử luồng presigned (3 bước) để tách bạch:
+
+| Bước                                  | Kết quả                                        |
+| ------------------------------------- | ---------------------------------------------- |
+| `POST /documents/uploads/presign`     | **200** — tạo được upload session, trả URL đúng |
+| `PUT` file trực tiếp lên storage      | **200** — file ghi lên MinIO thành công         |
+| `POST /uploads/{upload_id}/complete`  | **500** — `"Không thể hoàn tất upload"`        |
+
+Nghĩa là:
+
+- MinIO **sống và ghi được** (PUT 200, `storage.docshub.io.vn` resolve bình thường)
+- Tạo bản ghi DB **được** (presign tạo được document_id + revision_id)
+- Lỗi nằm ở **bước xử lý sau khi file đã nằm trên storage** — bước này dùng
+  chung cho cả 2 luồng (multipart và presigned), nên cả 2 cùng chết.
+
+Nhiều khả năng là bước gọi RAGFlow để đẩy tài liệu vào dataset. Xin team kiểm tra
+log ở đoạn đó, và kiểm tra kết nối tới RAGFlow.
+
+### Điểm tích cực: không còn để lại bản ghi mồ côi
+
+Sau các lần 500 ở trên, `GET /documents` trả `total_items: 0`. Trước đây request
+lỗi vẫn ghi DB để lại revision kẹt `queued` — phần này **đã được sửa**, cảm ơn team.
+
+### Lưu ý về dữ liệu
+
+Các document upload hôm qua đã biến mất (`document_count` từ 2 → 0), trong khi
+`versions` vẫn còn nguyên 5 bản ghi. Nếu team có chủ động xoá thì bỏ qua; còn
+không thì nên kiểm tra xem có phải dữ liệu bị mất ngoài ý muốn không.
+
+---
+
 ## 1. `POST /internal/api/v1/projects/{id}/documents/uploads` — 500 từ lần upload thứ hai
 
 **Mức độ: nghiêm trọng — chặn toàn bộ tính năng upload.**

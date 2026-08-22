@@ -80,15 +80,34 @@ export const endpoints = {
       `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/view`,
   },
 
-  // ── In Swagger but NOT routed on the deployed build ───────────────────────
-  // `POST /projects/{id}/retrieval` is documented but answers a bare 404 (not
-  // even an error envelope), verified 21/08/2026. The path is kept here so the
-  // chat slice has one place to switch to; until the backend deploys it, chat
-  // still runs on the MSW mock.
-  retrieval: (projectId: string) => `${INTERNAL}/projects/${projectId}/retrieval`,
-
+  // ── In Swagger but NOT routed on the deployed build ──────────────────────
+  // The chat module appeared in Swagger on 22/08/2026, but every one of these
+  // answers a bare `404 page not found` on api.docshub.io.vn — the running
+  // binary is older than the published spec. Paths are recorded here so the
+  // switch is one file; the chat slice stays on MSW until the backend deploys.
+  //
+  // Two things the spec does not say and the backend must confirm before this
+  // can be wired for real: the allowed values of `scope.mode`, and the response
+  // shapes (Swagger types every response as a bare `response.Envelope`).
   chat: {
-    ask: (projectId: string) => `/projects/${projectId}/chat`,
+    // ── Provisional paths, still served by MSW ──────────────────────────────
+    // The chat UI runs on these until the conversation endpoints below are
+    // actually deployed. They exist only in the mock.
     history: (projectId: string) => `/projects/${projectId}/chat/history`,
+    askLegacy: (projectId: string) => `/projects/${projectId}/chat`,
+
+    /** Conversations own the message history; a project can have several. */
+    conversations: (projectId: string) => `${INTERNAL}/projects/${projectId}/conversations`,
+    conversation: (projectId: string, conversationId: string) =>
+      `${INTERNAL}/projects/${projectId}/conversations/${conversationId}`,
+    /** Ask a question inside a conversation; answers carry citations. */
+    ask: (projectId: string, conversationId: string) =>
+      `${INTERNAL}/projects/${projectId}/conversations/${conversationId}/messages`,
+    /**
+     * Retrieval without the chat layer — returns matching chunks, no answer.
+     * Replaced `/retrieval`, and renamed its field `question` → `query` with a
+     * now-REQUIRED `scope`.
+     */
+    search: (projectId: string) => `${INTERNAL}/projects/${projectId}/search`,
   },
 } as const;
