@@ -32,10 +32,15 @@ export function parseAnswer(text: string, validIndexes: readonly number[]): Answ
   return segments;
 }
 
-/** Page range shown above the source list, e.g. "4–5" or "4". */
-export function pageRangeOf(pages: readonly number[]): string {
-  if (pages.length === 0) return '';
-  const sorted = [...new Set(pages)].sort((a, b) => a - b);
+/**
+ * Page range shown above the source list, e.g. "4–5" or "4".
+ * Citations without a page (the backend does not always supply one) are skipped
+ * rather than rendered as a bogus 0.
+ */
+export function pageRangeOf(pages: readonly (number | undefined)[]): string {
+  const known = pages.filter((page): page is number => page !== undefined);
+  if (known.length === 0) return '';
+  const sorted = [...new Set(known)].sort((a, b) => a - b);
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
   return first === last ? `${first}` : `${first}–${last}`;

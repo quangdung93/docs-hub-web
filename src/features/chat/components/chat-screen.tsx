@@ -10,7 +10,7 @@ import { useProject } from '@/features/projects';
 import { projectRoutes } from '@/features/projects/routes';
 import { Button, Card, EmptyState, IconButton, Skeleton } from '@/shared/ui';
 
-import { useAskQuestion, useChatHistory } from '../hooks/use-chat';
+import { useChat } from '../hooks/use-chat';
 
 import { ChatComposer } from './chat-composer';
 import { ChatMessage } from './chat-message';
@@ -24,8 +24,7 @@ import { CitationPanel } from './citation-panel';
 export function ChatScreen({ projectId }: { projectId: string }) {
   const { t } = useI18n();
   const { data: project } = useProject(projectId);
-  const { data: messages, isPending } = useChatHistory(projectId);
-  const askQuestion = useAskQuestion(projectId);
+  const { messages, isLoading, ask: askQuestion } = useChat(projectId);
 
   const [activeCitation, setActiveCitation] = useState<number | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
@@ -33,7 +32,7 @@ export function ChatScreen({ projectId }: { projectId: string }) {
 
   // Citations of the most recent assistant answer drive the source panel.
   const citations = useMemo(() => {
-    const answers = (messages ?? []).filter((message) => message.role === 'assistant');
+    const answers = messages.filter((message) => message.role === 'assistant');
     return answers.at(-1)?.citations ?? [];
   }, [messages]);
 
@@ -87,14 +86,14 @@ export function ChatScreen({ projectId }: { projectId: string }) {
               ref={transcriptRef}
               className="scroll-thin flex-1 space-y-6 overflow-y-auto px-5 py-6"
             >
-              {isPending && (
+              {isLoading && (
                 <>
                   <Skeleton className="ml-auto h-12 w-2/3 rounded-2xl" />
                   <Skeleton className="h-28 w-5/6 rounded-2xl" />
                 </>
               )}
 
-              {!isPending && (messages ?? []).length === 0 && (
+              {!isLoading && messages.length === 0 && (
                 <EmptyState
                   icon={MessagesSquare}
                   title={t('chat.empty.title')}
@@ -102,8 +101,8 @@ export function ChatScreen({ projectId }: { projectId: string }) {
                 />
               )}
 
-              {!isPending &&
-                (messages ?? []).map((message) => (
+              {!isLoading &&
+                messages.map((message) => (
                   <ChatMessage
                     key={message.id}
                     message={message}

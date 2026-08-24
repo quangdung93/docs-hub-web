@@ -28,6 +28,10 @@ export const queryKeys = {
   },
 
   chat: {
-    history: (projectId: string) => ['chat', 'history', projectId] as const,
+    /** Conversations in a project. */
+    conversations: (projectId: string) => ['chat', 'conversations', projectId] as const,
+    /** One conversation with its messages — the chat screen's source of truth. */
+    conversation: (projectId: string, conversationId: string) =>
+      ['chat', 'conversation', projectId, conversationId] as const,
   },
 } as const;

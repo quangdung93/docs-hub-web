@@ -69,7 +69,10 @@ export function CitationPanel({
                 )}
               >
                 <div className="text-brand mb-1 text-[11px] font-semibold">
-                  [{citation.index}] · {t('chat.citations.page', { page: citation.page })}
+                  [{citation.index}]
+                  {citation.page === undefined
+                    ? null
+                    : ` · ${t('chat.citations.page', { page: citation.page })}`}
                 </div>
                 {citation.excerpt}
               </div>

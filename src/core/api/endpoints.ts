@@ -81,21 +81,11 @@ export const endpoints = {
   },
 
   // ── In Swagger but NOT routed on the deployed build ──────────────────────
-  // The chat module appeared in Swagger on 22/08/2026, but every one of these
-  // answers a bare `404 page not found` on api.docshub.io.vn — the running
-  // binary is older than the published spec. Paths are recorded here so the
-  // switch is one file; the chat slice stays on MSW until the backend deploys.
-  //
-  // Two things the spec does not say and the backend must confirm before this
-  // can be wired for real: the allowed values of `scope.mode`, and the response
-  // shapes (Swagger types every response as a bare `response.Envelope`).
+  // Deployed and wired against the real API since 24/08/2026 — note Swagger was
+  // NOT regenerated, so it still documents these responses as a bare
+  // `response.Envelope`. The shapes in `features/chat/api/chat.dto.ts` come from
+  // probing the running service.
   chat: {
-    // ── Provisional paths, still served by MSW ──────────────────────────────
-    // The chat UI runs on these until the conversation endpoints below are
-    // actually deployed. They exist only in the mock.
-    history: (projectId: string) => `/projects/${projectId}/chat/history`,
-    askLegacy: (projectId: string) => `/projects/${projectId}/chat`,
-
     /** Conversations own the message history; a project can have several. */
     conversations: (projectId: string) => `${INTERNAL}/projects/${projectId}/conversations`,
     conversation: (projectId: string, conversationId: string) =>

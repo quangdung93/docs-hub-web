@@ -71,7 +71,10 @@ export function ChatMessage({
                 className="border-border bg-surface-muted text-muted-foreground hover:border-brand/40 focus-visible:ring-ring/40 inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <span className="text-brand font-semibold">{citation.index}</span>
-                {citation.documentName} · {t('chat.citations.page', { page: citation.page })}
+                {citation.documentName}
+                {citation.page === undefined
+                  ? null
+                  : ` · ${t('chat.citations.page', { page: citation.page })}`}
               </button>
             ))}
           </div>
