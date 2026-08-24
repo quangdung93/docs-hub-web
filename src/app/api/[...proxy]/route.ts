@@ -17,7 +17,14 @@ const ACCESS_COOKIE = 'access_token';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Hop-by-hop / sensitive headers we must not forward upstream.
-const STRIPPED_REQUEST_HEADERS = new Set(['host', 'cookie', 'connection', 'content-length']);
+const STRIPPED_REQUEST_HEADERS = new Set([
+  'host',
+  'cookie',
+  'connection',
+  'content-length',
+  // Client-side correlation id for the API inspector — meaningless upstream.
+  'x-api-log-id',
+]);
 
 function isSameOrigin(req: NextRequest): boolean {
   const site = req.headers.get('sec-fetch-site');

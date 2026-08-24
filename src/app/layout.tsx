@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 
 import { getLocale } from '@/core/i18n/server';
+import { ApiInspector } from '@/shared/components';
 import { AppProviders } from '@/shared/providers';
 
 import './globals.css';
@@ -34,7 +35,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-dvh antialiased">
-        <AppProviders locale={locale}>{children}</AppProviders>
+        <AppProviders locale={locale}>
+          {children}
+          {/* Dev/test aid: hidden in production so it never ships to end users. */}
+          {process.env.NEXT_PUBLIC_APP_ENV !== 'production' && <ApiInspector />}
+        </AppProviders>
       </body>
     </html>
   );
