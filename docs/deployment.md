@@ -9,10 +9,10 @@ alongside the existing `mobix-landing` site. Source lives at `/root/docs-hub-web
 internet → mobix-landing-nginx (:80/:443, TLS)
              ├── location /            → app:3000            (landing, pre-existing)
              └── location ^~ /docshub_su5 → docs-hub-web:3000 (this app)
-                                              └── docshub-mock:4000 (MSW API)
+                                              └── https://api.docshub.io.vn (real backend)
 ```
 
-Neither of this app's containers publishes a host port. They join the existing
+This app's container publishes no host port. It joins the existing
 `mobix-landing_default` network and are reached by container name, so nothing is
 exposed to the internet except through the shared nginx.
 
@@ -58,10 +58,14 @@ rebuilding the image and updating the nginx `location` to match.
 
 ## Current data source
 
-`docshub-mock` runs the MSW handlers (`src/mocks/`) as a real HTTP API — this is a
-demo deployment, so data resets on container restart. To switch to a real backend:
-point `API_URL` at it in `docker-compose.yml` and drop the `docshub-mock` service.
-No application code changes.
+The real backend at `https://api.docshub.io.vn` (`API_URL` in
+`docker-compose.yml`). The MSW mock service was removed on 24/08/2026: this
+deployment exists to verify the API contract, and fixtures prove nothing about
+a contract. Data is whatever the backend holds — it survives restarts, and it is
+shared with everyone else testing against that backend.
+
+`NEXT_PUBLIC_APP_ENV` is `staging`, not `production`, so the floating API
+inspector is mounted. Set it to `production` to hide the inspector.
 
 ## Rollback
 

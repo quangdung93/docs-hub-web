@@ -23,32 +23,16 @@ services:
     environment:
       - NODE_ENV=production
       - APP_ENV=production
-      - NEXT_PUBLIC_APP_ENV=production
+      # `staging`, not `production`: this is the API-mapping environment, and the
+      # floating API inspector is mounted for every value except `production`.
+      - NEXT_PUBLIC_APP_ENV=staging
       - NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH:-/docshub_su5}
-      # Demo deployment: the API is the MSW mock service below. To move to a real
-      # backend, point API_URL at it and drop the mock service — no code change.
+      # Points at the real backend. The MSW mock service is gone: testing the API
+      # contract against fixtures proves nothing about the contract.
       - ENABLE_MOCKS=false
-      - API_URL=http://docshub-mock:4000
-      # Shared with the mock so JWTs signed there verify here. Supplied by the
-      # .env file beside this compose file; never committed, never baked in.
-      - AUTH_SECRET=${AUTH_SECRET:?AUTH_SECRET is required}
-    depends_on:
-      - docshub-mock
-
-  docshub-mock:
-    build:
-      context: .
-      dockerfile: Dockerfile.mock
-    container_name: docs-hub-mock
-    restart: unless-stopped
-    # Internal-only: on the default network, never on `edge`, never published.
-    expose:
-      - "4000"
-    networks:
-      - default
-    environment:
-      - NODE_ENV=production
-      - MOCK_PORT=4000
+      - API_URL=${API_URL:-https://api.docshub.io.vn}
+      # Cookie/session crypto for the BFF. Supplied by the .env file beside this
+      # compose file; never committed, never baked into the image.
       - AUTH_SECRET=${AUTH_SECRET:?AUTH_SECRET is required}
 
 networks:
