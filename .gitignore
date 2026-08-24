@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files — commit only the non-secret templates
 .env*.local
+# ...and any copy of one: `.env.local.bak` does NOT match `.env*.local`,
+# because the glob has to reach the end of the name.
+.env*.local.*
 .env.development.local
 .env.staging.local
 .env.production.local
