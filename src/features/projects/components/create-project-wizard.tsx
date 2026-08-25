@@ -11,6 +11,7 @@ import { UploadPanel } from '@/features/documents';
 import { Button, Card, CardBody, Field, Input, Stepper, Textarea } from '@/shared/ui';
 import { ScreenHeader } from '@/shared/components';
 
+import { projectsApi } from '../api/projects.api';
 import { useCreateProject } from '../hooks/use-projects';
 import { projectRoutes } from '../routes';
 import { type CreateProjectInput, CreateProjectInputSchema } from '../schemas/project.schema';
@@ -30,6 +31,12 @@ export function CreateProjectWizard() {
   // not orphan the already-created project.
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
+
+  // The avatar is picked in step 1, but the project it belongs to does not exist
+  // until that step is submitted — so the file waits here and is uploaded once
+  // there is an id to attach it to.
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const {
     register,
@@ -52,6 +59,11 @@ export function CreateProjectWizard() {
       onSuccess: (project) => {
         setCreatedProjectId(project.id);
         setStep(2);
+        // Fire-and-forget: a failed avatar must not block a project that was
+        // created successfully. The user can set one later from settings.
+        if (avatar) {
+          projectsApi.uploadAvatar(project.id, avatar).catch(() => undefined);
+        }
       },
     });
   });
@@ -72,20 +84,35 @@ export function CreateProjectWizard() {
             <CardBody>
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                 <label className="group border-input bg-surface-muted/60 hover:border-brand/60 hover:bg-brand-subtle/40 grid size-28 shrink-0 cursor-pointer place-items-center rounded-xl border-2 border-dashed text-center transition">
-                  <div>
-                    <ImagePlus
-                      className="text-muted-foreground group-hover:text-brand mx-auto size-6"
-                      aria-hidden
-                    />
-                    <p className="text-muted-foreground mt-1 px-1 text-[11px] leading-tight">
-                      {t('createProject.imageLabel')}
-                    </p>
-                  </div>
+                  {avatarPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- blob: URL, next/image cannot take one
+                    <img src={avatarPreview} alt="" className="size-full rounded-xl object-cover" />
+                  ) : (
+                    <div>
+                      <ImagePlus
+                        className="text-muted-foreground group-hover:text-brand mx-auto size-6"
+                        aria-hidden
+                      />
+                      <p className="text-muted-foreground mt-1 px-1 text-[11px] leading-tight">
+                        {t('createProject.imageLabel')}
+                      </p>
+                    </div>
+                  )}
                   <input
                     type="file"
                     accept="image/*"
                     className="sr-only"
                     aria-label={t('createProject.imageLabel')}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      setAvatar(file);
+                      // Revoke the previous object URL, or every re-pick leaks one.
+                      setAvatarPreview((previous) => {
+                        if (previous) URL.revokeObjectURL(previous);
+                        return URL.createObjectURL(file);
+                      });
+                    }}
                   />
                 </label>
 

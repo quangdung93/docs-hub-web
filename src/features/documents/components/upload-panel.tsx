@@ -7,6 +7,7 @@ import { useUploadQueue } from '../hooks/use-upload-queue';
 import { ACCEPT_ATTRIBUTE } from '../schemas/document.schema';
 
 import { UploadQueueItem } from './upload-queue-item';
+import { VersionPicker } from './version-picker';
 
 /**
  * Dropzone + processing queue. Shared verbatim by the upload screen and step 2 of
@@ -21,7 +22,30 @@ export function UploadPanel({
   layout?: 'split' | 'stacked';
 }) {
   const { t } = useI18n();
-  const { items, addFiles, removeItem, markSettled, progress } = useUploadQueue(projectId);
+  const {
+    items,
+    addFiles,
+    removeItem,
+    markSettled,
+    progress,
+    draftVersions,
+    targetVersionId,
+    selectVersion,
+    addVersion,
+    isAddingVersion,
+  } = useUploadQueue(projectId);
+
+  // Above the dropzone on purpose: an upload with no version is refused, so the
+  // choice has to be visible before a file is dropped, not after it fails.
+  const versionPicker = (
+    <VersionPicker
+      versions={draftVersions}
+      value={targetVersionId}
+      onChange={selectVersion}
+      onCreate={addVersion}
+      isCreating={isAddingVersion}
+    />
+  );
 
   const dropzone = (
     <Dropzone
@@ -72,6 +96,7 @@ export function UploadPanel({
   if (layout === 'stacked') {
     return (
       <div className="space-y-4">
+        {versionPicker}
         {dropzone}
         {items.length > 0 && queue}
       </div>
@@ -79,9 +104,12 @@ export function UploadPanel({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      {dropzone}
-      {queue}
+    <div className="space-y-4">
+      {versionPicker}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {dropzone}
+        {queue}
+      </div>
     </div>
   );
 }

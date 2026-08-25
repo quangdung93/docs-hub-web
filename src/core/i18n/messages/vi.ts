@@ -187,6 +187,16 @@ export const vi = {
   'upload.status.tooLarge': 'Tệp vượt quá 20 MB',
   'upload.chunks': '{count} đoạn',
 
+  // Chọn phiên bản — mọi lần tải lên đều thuộc về một phiên bản nháp.
+  'versions.selectLabel': 'Tải lên phiên bản',
+  'versions.new': 'Phiên bản mới',
+  'versions.newLabel': 'Đặt tên phiên bản mới',
+  'versions.emptyPrompt': 'Dự án chưa có phiên bản nào. Tạo một phiên bản để bắt đầu tải tài liệu.',
+  'versions.labelPlaceholder': 'ví dụ: v1.0',
+  'versions.create': 'Tạo',
+  'versions.creating': 'Đang tạo…',
+  'versions.createFailed': 'Không tạo được phiên bản. Vui lòng thử lại.',
+
   // Pipeline xử lý — các bước một file phải qua trước khi tra cứu được.
   'ingestion.title': 'Tiến trình xử lý',
   'ingestion.step.uploaded': 'Đã tải lên — đang chờ xử lý',

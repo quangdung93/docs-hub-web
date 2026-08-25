@@ -69,6 +69,18 @@ export function useCreateProject() {
   });
 }
 
+/**
+ * Upload a project avatar. Three round-trips (sign → PUT to storage → confirm)
+ * hidden behind one mutation, so callers do not have to know the storage flow.
+ */
+export function useUploadAvatar(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => projectsApi.uploadAvatar(projectId, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.projects.all }),
+  });
+}
+
 export function useUpdateProject(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({

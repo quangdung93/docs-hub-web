@@ -22,8 +22,15 @@ export function ProjectCard({ project }: { project: Project }) {
       className="group border-border hover:border-brand/40 focus-visible:ring-ring/40 block min-h-[168px] rounded-xl border p-5 transition hover:shadow-sm focus-visible:ring-2 focus-visible:outline-none"
     >
       <div className="flex items-start justify-between">
-        <span className="bg-brand-subtle text-brand grid size-11 place-items-center rounded-lg">
-          <Folder className="size-5.5" aria-hidden />
+        <span className="bg-brand-subtle text-brand grid size-11 place-items-center overflow-hidden rounded-lg">
+          {project.imageUrl ? (
+            /* Presigned URL with a rotating signature: next/image would need it in
+               remotePatterns and would cache a link that expires in 15 minutes. */
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={project.imageUrl} alt="" className="size-full object-cover" />
+          ) : (
+            <Folder className="size-5.5" aria-hidden />
+          )}
         </span>
       </div>
 

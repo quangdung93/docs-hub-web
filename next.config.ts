@@ -16,7 +16,10 @@ const cspDirectives = [
   // Next injects a nonce for its own scripts in prod; dev needs eval for HMR.
   `script-src 'self' ${isDev ? "'unsafe-eval'" : ''} 'unsafe-inline'`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  // Project avatars are served from object storage as presigned links, so the
+  // storage host has to be allowed here. `connect-src` deliberately stays
+  // `'self'` — a rendered image is a far smaller surface than a fetch target.
+  "img-src 'self' data: blob: https://storage.docshub.io.vn",
   "font-src 'self'",
   "connect-src 'self'",
   "object-src 'none'",

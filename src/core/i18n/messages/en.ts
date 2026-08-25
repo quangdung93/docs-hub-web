@@ -184,6 +184,16 @@ export const en: Record<MessageKey, string> = {
   'upload.status.tooLarge': 'File exceeds 20 MB',
   'upload.chunks': '{count} chunks',
 
+  // Version picker — an upload is always scoped to a draft version.
+  'versions.selectLabel': 'Upload into version',
+  'versions.new': 'New version',
+  'versions.newLabel': 'Name the new version',
+  'versions.emptyPrompt': 'This project has no version yet. Create one to start uploading.',
+  'versions.labelPlaceholder': 'e.g. v1.0',
+  'versions.create': 'Create',
+  'versions.creating': 'Creating…',
+  'versions.createFailed': 'Could not create the version. Try again.',
+
   // Ingestion pipeline — the stages a file goes through before it is searchable.
   'ingestion.title': 'Processing pipeline',
   'ingestion.step.uploaded': 'Uploaded — waiting for the worker',

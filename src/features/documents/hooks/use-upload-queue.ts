@@ -6,7 +6,7 @@ import { useCallback, useState } from 'react';
 import { queryKeys } from '@/core/api';
 
 import { documentsApi } from '../api/documents.api';
-import { useProjectVersions } from './use-documents';
+import { useCreateProjectVersion, useProjectVersions } from './use-documents';
 import {
   type UploadItem,
   isRejected,
@@ -28,12 +28,24 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
   const queryClient = useQueryClient();
   const [items, setItems] = useState<UploadItem[]>([]);
   const { data: versions } = useProjectVersions(projectId);
+  const createVersion = useCreateProjectVersion(projectId);
+
+  /** Explicit pick from the version selector; null until the user chooses. */
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+
+  // Published versions are frozen — the backend refuses writes to them — so only
+  // drafts can receive an upload. Newest first, which is what the selector shows.
+  const draftVersions = (versions ?? [])
+    .filter((version) => version.status === 'draft')
+    .sort((a, b) => b.sequence_no - a.sequence_no);
+
+  // A selection that no longer exists (version published elsewhere, list
+  // refetched) must not silently target a dead id — fall back to the newest.
+  const selectedStillValid =
+    selectedVersionId !== null && draftVersions.some((v) => v.id === selectedVersionId);
 
   const targetVersionId =
-    projectVersionId ??
-    versions
-      ?.filter((version) => version.status === 'draft')
-      .sort((a, b) => b.sequence_no - a.sequence_no)[0]?.id;
+    projectVersionId ?? (selectedStillValid ? selectedVersionId : draftVersions[0]?.id);
 
   const patch = useCallback((id: string, changes: Partial<UploadItem>) => {
     setItems((current) => current.map((item) => (item.id === id ? { ...item, ...changes } : item)));
@@ -107,13 +119,33 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
     );
   }, []);
 
+  /**
+   * Create a draft version and target it. This is the way out of the dead end a
+   * project with no versions puts the user in: the backend rejects every upload
+   * until one exists, and nothing else in the UI creates one.
+   */
+  const addVersion = useCallback(
+    async (label: string) => {
+      const created = await createVersion.mutateAsync(label);
+      setSelectedVersionId(created.id);
+      return created;
+    },
+    [createVersion]
+  );
+
   return {
     items,
     addFiles,
     removeItem,
     markSettled,
     progress: queueProgress(items),
-    /** False when the project has no draft version — the dropzone explains why. */
+    /** False when the project has no draft version — the panel explains why. */
     canUpload: Boolean(targetVersionId),
+    /** Draft versions an upload can target, newest first. */
+    draftVersions,
+    targetVersionId,
+    selectVersion: setSelectedVersionId,
+    addVersion,
+    isAddingVersion: createVersion.isPending,
   };
 }

@@ -12,6 +12,9 @@ import type {
 
 import { AvatarUploadUrlDtoSchema, ProjectDtoSchema, ProjectMemberDtoSchema } from './project.dto';
 
+/** Label of the version every new project starts with. */
+export const FIRST_VERSION_LABEL = 'v1.0';
+
 /**
  * Projects transport for docs-hub-api.
  *
@@ -43,12 +46,30 @@ export const projectsApi = {
     }
   },
 
+  /**
+   * Create a project, then give it a first draft version.
+   *
+   * The backend creates projects with no versions at all, and an upload must be
+   * scoped to one — so a freshly created project cannot accept a single file
+   * until someone makes a version. Users have no reason to know that concept
+   * before they need it, so the first one is made here.
+   *
+   * A failure to create the version does NOT fail the call: the project exists
+   * and is usable, and the upload screen can create a version on demand. Better
+   * a project without a version than an orphaned project the user cannot see.
+   */
   create: async (input: CreateProjectInput): Promise<Project> => {
     const { data } = await http.post(endpoints.projects.create, {
       name: input.name,
       description: input.description,
     });
-    return toProject(unwrap(data, ProjectDtoSchema));
+    const project = toProject(unwrap(data, ProjectDtoSchema));
+
+    await http
+      .post(endpoints.versions.create(project.id), { label: FIRST_VERSION_LABEL })
+      .catch(() => undefined);
+
+    return project;
   },
 
   update: async (projectId: string, input: Partial<UpdateProjectInput>): Promise<Project> => {
@@ -114,8 +135,9 @@ export const projectsApi = {
   /**
    * Avatar upload, three legs (see the API doc):
    *  1. ask the backend for a presigned URL,
-   *  2. PUT the file straight to MinIO — no Authorization header, the URL is
-   *     already signed, and sending one makes the request fail,
+   *  2. PUT the file to that URL through the same-origin relay (the CSP blocks a
+   *     direct cross-host fetch) — no Authorization header, the URL is already
+   *     signed and sending one breaks the signature,
    *  3. tell the backend to verify and persist it.
    */
   uploadAvatar: async (projectId: string, file: File): Promise<Project> => {
@@ -125,13 +147,18 @@ export const projectsApi = {
     });
     const { upload_url } = unwrap(urlBody, AvatarUploadUrlDtoSchema);
 
-    // Deliberately `fetch`, not the axios instance: that instance targets the
-    // BFF and attaches credentials, neither of which applies to object storage.
-    const upload = await fetch(upload_url, {
-      method: 'PUT',
-      body: file,
-      headers: { 'Content-Type': file.type },
-    });
+    // Relayed through a same-origin route rather than PUT straight to storage:
+    // the CSP pins `connect-src` to `'self'`, so the direct request never leaves
+    // the page. The relay forwards the body to the presigned URL server-side.
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+    const upload = await fetch(
+      `${basePath}/api/storage-put?url=${encodeURIComponent(upload_url)}`,
+      {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      }
+    );
     if (!upload.ok) {
       throw new Error(`Avatar upload failed with status ${upload.status}`);
     }
