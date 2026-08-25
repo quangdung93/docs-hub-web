@@ -77,12 +77,41 @@ export function toChatMessage(dto: ChatMessageDto): ChatMessage {
   };
 }
 
+/**
+ * Put a transcript back in conversation order.
+ *
+ * The backend returns each turn as `[assistant, user]` — the answer before the
+ * question that produced it — and stamps both rows with the *same* `created_at`,
+ * so sorting by time cannot fix it. Turns themselves are in order, so reversing
+ * each adjacent same-timestamp pair is enough.
+ *
+ * ponytail: pairwise swap, not a general sort. Replace this the day the backend
+ * emits distinct timestamps or the right order.
+ */
+function inConversationOrder(messages: ChatMessage[]): ChatMessage[] {
+  const ordered = [...messages];
+  for (let i = 0; i < ordered.length - 1; i += 1) {
+    const current = ordered[i];
+    const next = ordered[i + 1];
+    if (
+      current?.role === 'assistant' &&
+      next?.role === 'user' &&
+      current.createdAt === next.createdAt
+    ) {
+      ordered[i] = next;
+      ordered[i + 1] = current;
+      i += 1; // The pair is settled; do not re-examine the row just moved.
+    }
+  }
+  return ordered;
+}
+
 export function toConversation(dto: ConversationDto): Conversation {
   return {
     id: dto.id,
     title: dto.title,
     scope: toChatScope(dto.active_scope),
-    messages: (dto.messages ?? []).map(toChatMessage),
+    messages: inConversationOrder((dto.messages ?? []).map(toChatMessage)),
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
   };

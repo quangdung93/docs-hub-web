@@ -117,4 +117,65 @@ assert.equal(withMessages.messages.length, 2);
 assert.equal(withMessages.messages[1]?.role, 'assistant');
 assert.deepEqual(withMessages.messages[1]?.citations, []);
 
+// The backend emits each turn as [assistant, user] with an identical timestamp
+// on both rows, so the transcript reads answer-before-question until reordered.
+// Observed 25/08/2026 over a 10-message conversation.
+const reordered = toConversation({
+  id: 'c2',
+  project_id: 'p1',
+  user_id: 'u1',
+  title: 't',
+  active_scope: { mode: 'all' },
+  messages: [
+    { id: 'a1', role: 'assistant', content: 'dap 1', created_at: '2026-08-25T09:25:11Z' },
+    { id: 'q1', role: 'user', content: 'hoi 1', created_at: '2026-08-25T09:25:11Z' },
+    { id: 'a2', role: 'assistant', content: 'dap 2', created_at: '2026-08-25T09:25:18Z' },
+    { id: 'q2', role: 'user', content: 'hoi 2', created_at: '2026-08-25T09:25:18Z' },
+  ],
+  created_at: '2026-08-25T09:25:11Z',
+  updated_at: '2026-08-25T09:25:18Z',
+}).messages;
+assert.deepEqual(
+  reordered.map((m) => m.content),
+  ['hoi 1', 'dap 1', 'hoi 2', 'dap 2']
+);
+
+// A pair that is already in order must be left alone.
+const alreadyRight = toConversation({
+  id: 'c3',
+  project_id: 'p1',
+  user_id: 'u1',
+  title: 't',
+  active_scope: { mode: 'all' },
+  messages: [
+    { id: 'q', role: 'user', content: 'hoi', created_at: '2026-08-25T09:00:00Z' },
+    { id: 'a', role: 'assistant', content: 'dap', created_at: '2026-08-25T09:00:00Z' },
+  ],
+  created_at: '2026-08-25T09:00:00Z',
+  updated_at: '2026-08-25T09:00:00Z',
+}).messages;
+assert.deepEqual(
+  alreadyRight.map((m) => m.content),
+  ['hoi', 'dap']
+);
+
+// Different timestamps are the backend's own ordering — do not touch them.
+const distinctTimes = toConversation({
+  id: 'c4',
+  project_id: 'p1',
+  user_id: 'u1',
+  title: 't',
+  active_scope: { mode: 'all' },
+  messages: [
+    { id: 'a', role: 'assistant', content: 'dap', created_at: '2026-08-25T09:00:01Z' },
+    { id: 'q', role: 'user', content: 'hoi', created_at: '2026-08-25T09:00:02Z' },
+  ],
+  created_at: '2026-08-25T09:00:01Z',
+  updated_at: '2026-08-25T09:00:02Z',
+}).messages;
+assert.deepEqual(
+  distinctTimes.map((m) => m.content),
+  ['dap', 'hoi']
+);
+
 console.log('chat.mapper: all assertions passed');
