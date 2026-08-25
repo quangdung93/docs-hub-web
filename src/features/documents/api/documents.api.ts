@@ -12,6 +12,7 @@ import {
   type ProjectVersionDto,
 } from './document.dto';
 import { toDocument, toDocumentStatus } from '../services/document.mapper';
+import { toIngestionStage } from '../services/ingestion.service';
 import { type Document } from '../schemas/document.schema';
 
 /**
@@ -155,13 +156,21 @@ export const documentsApi = {
     await http.delete(endpoints.documents.remove(projectId, documentId));
   },
 
-  /** Poll one revision's ingestion state; drives the indeterminate progress bar. */
+  /**
+   * Poll one revision's ingestion state. Returns the pipeline `stage` alongside
+   * the coarse `status`: the badge needs one word, the processing panel needs to
+   * know which of parse / chunk / embed is running or broke.
+   */
   revisionStatus: async (projectId: string, documentId: string, revisionId: string) => {
     const { data } = await http.get(
       endpoints.documents.revisionStatus(projectId, documentId, revisionId)
     );
     const revision = apiSuccessSchema(RevisionDtoSchema).parse(data).data;
-    return { revision, status: toDocumentStatus(revision) };
+    return {
+      revision,
+      status: toDocumentStatus(revision),
+      stage: toIngestionStage(revision),
+    };
   },
 
   /** Re-run ingestion for a revision that failed. */

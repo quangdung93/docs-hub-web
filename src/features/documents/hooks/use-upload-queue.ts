@@ -96,10 +96,22 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
     setItems((current) => current.filter((item) => item.id !== id));
   }, []);
 
+  /**
+   * Settle a row from what the ingestion pipeline reported. The upload request
+   * only tells us the file was accepted; how the worker finished arrives later,
+   * through the per-row status poll.
+   */
+  const markSettled = useCallback((id: string, status: 'indexed' | 'failed') => {
+    setItems((current) =>
+      current.map((item) => (item.id === id && item.status !== status ? { ...item, status } : item))
+    );
+  }, []);
+
   return {
     items,
     addFiles,
     removeItem,
+    markSettled,
     progress: queueProgress(items),
     /** False when the project has no draft version — the dropzone explains why. */
     canUpload: Boolean(targetVersionId),

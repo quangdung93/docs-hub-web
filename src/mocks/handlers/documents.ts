@@ -74,6 +74,9 @@ function toRevisionDto(document: Document, projectId: string) {
   };
 }
 
+/** Poll counter per document, so the mocked pipeline can advance over time. */
+const pollCount = new Map<string, number>();
+
 function documentsOf(projectId: string): Document[] {
   return db.documents[projectId] ?? [];
 }
@@ -221,7 +224,25 @@ export const documentHandlers = [
         return HttpResponse.json(failure('NOT_FOUND', 'Không tìm thấy tài liệu'), { status: 404 });
       }
 
-      return HttpResponse.json(envelope(toRevisionDto(document, projectId)));
+      // Advance the pipeline one step per poll. A mock that answers the same
+      // state forever cannot exercise the stepper at all — and the real backend
+      // is currently stuck at `queued`, so this is the only way to see the
+      // parse → chunk → embed transitions before RAGFlow is connected.
+      const revision = toRevisionDto(document, projectId);
+      if (document.status !== 'failed' && document.status !== 'indexed') {
+        const polls = (pollCount.get(document.id) ?? 0) + 1;
+        pollCount.set(document.id, polls);
+
+        if (polls === 1) revision.status = 'queued';
+        else if (polls === 2) revision.ragflow_sync_status = 'pending';
+        else if (polls === 3) revision.ragflow_sync_status = 'syncing';
+        else {
+          revision.ragflow_sync_status = 'synced';
+          document.status = 'indexed';
+        }
+      }
+
+      return HttpResponse.json(envelope(revision));
     }
   ),
 
@@ -238,7 +259,10 @@ export const documentHandlers = [
         );
       }
 
-      if (document) document.status = 'processing';
+      if (document) {
+        document.status = 'processing';
+        pollCount.delete(document.id);
+      }
       return HttpResponse.json(envelope({ status: 'queued' }), { status: 202 });
     }
   ),

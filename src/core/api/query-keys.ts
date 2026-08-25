@@ -20,6 +20,9 @@ export const queryKeys = {
       ['documents', 'list', projectId, filters ?? {}] as const,
     detail: (projectId: string, documentId: string) =>
       ['documents', 'detail', projectId, documentId] as const,
+    /** Ingestion pipeline of one revision — polled while it is still running. */
+    revisionStatus: (projectId: string, documentId: string, revisionId: string) =>
+      ['documents', 'revision-status', projectId, documentId, revisionId] as const,
   },
 
   versions: {

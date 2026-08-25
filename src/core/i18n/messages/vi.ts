@@ -186,6 +186,15 @@ export const vi = {
   'upload.status.noVersionHint': 'Tạo một phiên bản nháp trước khi tải tài liệu lên.',
   'upload.status.tooLarge': 'Tệp vượt quá 20 MB',
   'upload.chunks': '{count} đoạn',
+
+  // Pipeline xử lý — các bước một file phải qua trước khi tra cứu được.
+  'ingestion.title': 'Tiến trình xử lý',
+  'ingestion.step.uploaded': 'Đã tải lên — đang chờ xử lý',
+  'ingestion.step.parsing': 'Đang bóc tách nội dung',
+  'ingestion.step.chunking': 'Đang cắt thành đoạn',
+  'ingestion.step.embedding': 'Đang tạo vector',
+  'ingestion.step.done': 'Đã lập chỉ mục — tra cứu được',
+  'ingestion.retry': 'Chạy lại',
   'upload.security': 'Tệp được xử lý và lưu trong hạ tầng nội bộ.',
   'upload.remove': 'Bỏ tệp khỏi hàng đợi',
 

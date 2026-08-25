@@ -40,6 +40,33 @@ export function useDocumentDetail(projectId: string, documentId: string | null) 
       const status = query.state.data?.document.status;
       return status === 'queued' || status === 'processing' ? 3_000 : false;
     },
+    // Must beat the 15s staleTime above, or the 3s interval fires and every
+    // refetch is answered from cache — the row would look frozen mid-ingestion.
+    staleTime: 0,
+  });
+}
+
+/**
+ * Poll one revision's ingestion pipeline.
+ *
+ * Polling stops the moment the stage stops running — a finished or failed
+ * revision must not keep a timer alive, and a failure that kept `isRunning` true
+ * would poll forever against a row that will never change.
+ */
+export function useRevisionStatus(
+  projectId: string,
+  documentId: string | null,
+  revisionId: string | null
+) {
+  return useQuery({
+    queryKey: queryKeys.documents.revisionStatus(projectId, documentId ?? '', revisionId ?? ''),
+    queryFn: () => documentsApi.revisionStatus(projectId, documentId!, revisionId!),
+    enabled: Boolean(documentId && revisionId),
+    refetchInterval: (query) => (query.state.data?.stage.isRunning ? 3_000 : false),
+    // The provider sets a global `staleTime: 60_000`. Polling data is stale the
+    // moment it arrives — leave it and the interval fires but every refetch is
+    // served from cache, so the pipeline appears frozen on its first state.
+    staleTime: 0,
   });
 }
 

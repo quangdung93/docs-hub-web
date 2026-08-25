@@ -183,6 +183,15 @@ export const en: Record<MessageKey, string> = {
   'upload.status.noVersionHint': 'Create a draft version before uploading documents.',
   'upload.status.tooLarge': 'File exceeds 20 MB',
   'upload.chunks': '{count} chunks',
+
+  // Ingestion pipeline — the stages a file goes through before it is searchable.
+  'ingestion.title': 'Processing pipeline',
+  'ingestion.step.uploaded': 'Uploaded — waiting for the worker',
+  'ingestion.step.parsing': 'Extracting text',
+  'ingestion.step.chunking': 'Splitting into chunks',
+  'ingestion.step.embedding': 'Building embeddings',
+  'ingestion.step.done': 'Indexed — ready to search',
+  'ingestion.retry': 'Run again',
   'upload.security': 'Files are processed and stored on internal infrastructure.',
   'upload.remove': 'Remove file from queue',
 

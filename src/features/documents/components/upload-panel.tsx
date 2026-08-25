@@ -21,7 +21,7 @@ export function UploadPanel({
   layout?: 'split' | 'stacked';
 }) {
   const { t } = useI18n();
-  const { items, addFiles, removeItem, progress } = useUploadQueue(projectId);
+  const { items, addFiles, removeItem, markSettled, progress } = useUploadQueue(projectId);
 
   const dropzone = (
     <Dropzone
@@ -56,7 +56,13 @@ export function UploadPanel({
       ) : (
         <ul className="space-y-2.5">
           {items.map((item) => (
-            <UploadQueueItem key={item.id} item={item} onRemove={removeItem} />
+            <UploadQueueItem
+              key={item.id}
+              item={item}
+              projectId={projectId}
+              onRemove={removeItem}
+              onSettled={markSettled}
+            />
           ))}
         </ul>
       )}
