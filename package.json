@@ -42,7 +42,6 @@
     "@commitlint/config-conventional": "^19.6.0",
     "@mswjs/http-middleware": "^0.10.3",
     "@tailwindcss/postcss": "^4",
-    "@tanstack/react-query-devtools": "^5.62.7",
     "@types/express": "^5.0.0",
     "@types/node": "^20",
     "@types/react": "^19",

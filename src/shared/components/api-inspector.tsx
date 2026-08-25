@@ -9,6 +9,7 @@ import {
   getApiLog,
   subscribeApiLog,
   toCurl,
+  toUpstreamCurl,
 } from '@/shared/api/api-log';
 import { cn } from '@/shared/lib/utils';
 
@@ -52,12 +53,26 @@ function EntryDetail({ entry }: { entry: ApiLogEntry }) {
       <section className="space-y-1">
         <div className="flex items-center justify-between">
           <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            curl
+            curl — qua web (BFF)
           </h4>
-          <CopyButton text={toCurl(entry)} label="Copy curl" />
+          <CopyButton text={toCurl(entry)} label="Copy" />
         </div>
         <pre className="bg-background overflow-x-auto rounded p-2 text-[11px] leading-relaxed">
           {toCurl(entry)}
+        </pre>
+      </section>
+
+      {/* The same call aimed at the backend directly — this is the one to paste
+          into a bug report, since the BFF hop is the app's business, not theirs. */}
+      <section className="space-y-1">
+        <div className="flex items-center justify-between">
+          <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+            curl — thẳng lên backend
+          </h4>
+          <CopyButton text={toUpstreamCurl(entry)} label="Copy" />
+        </div>
+        <pre className="bg-background overflow-x-auto rounded p-2 text-[11px] leading-relaxed">
+          {toUpstreamCurl(entry)}
         </pre>
       </section>
 
@@ -90,7 +105,7 @@ function EntryDetail({ entry }: { entry: ApiLogEntry }) {
           </h4>
           {entry.responseBody && <CopyButton text={entry.responseBody} label="Copy" />}
         </div>
-        <pre className="bg-background max-h-64 overflow-auto rounded p-2 text-[11px]">
+        <pre className="bg-background max-h-96 overflow-auto rounded p-2 text-[11px] break-words whitespace-pre-wrap">
           {entry.responseBody || entry.error || '(đang chờ…)'}
         </pre>
       </section>

@@ -57,12 +57,16 @@ export function clearApiLog() {
 
 let counter = 0;
 
-/** Truncated so a 10 MB upload body never lands in memory or the DOM. */
-const MAX_BODY_CHARS = 20_000;
+/**
+ * Only the request body is capped, and generously: a multipart upload would
+ * otherwise put the whole file in memory. Responses are kept in full — a
+ * truncated payload is exactly the thing you cannot debug from.
+ */
+const MAX_REQUEST_CHARS = 100_000;
 
 function truncate(text: string): string {
-  return text.length > MAX_BODY_CHARS
-    ? `${text.slice(0, MAX_BODY_CHARS)}\n… (cắt bớt ${text.length - MAX_BODY_CHARS} ký tự)`
+  return text.length > MAX_REQUEST_CHARS
+    ? `${text.slice(0, MAX_REQUEST_CHARS)}\n… (cắt bớt ${text.length - MAX_REQUEST_CHARS} ký tự)`
     : text;
 }
 
@@ -116,9 +120,9 @@ function finish(id: string | undefined, patch: Partial<ApiLogEntry>) {
 
 function stringifyResponse(data: unknown): string {
   if (data == null) return '';
-  if (typeof data === 'string') return truncate(data);
+  if (typeof data === 'string') return data;
   try {
-    return truncate(JSON.stringify(data, null, 2));
+    return JSON.stringify(data, null, 2);
   } catch {
     return '[không serialise được]';
   }
@@ -136,26 +140,51 @@ export function logError(id: string | undefined, error: AxiosError) {
   });
 }
 
+/** Shell-quote for a single-quoted argument. */
+function shellQuote(value: string): string {
+  return value.replace(/'/g, `'\\''`);
+}
+
+function bodyLines(entry: ApiLogEntry): string[] {
+  if (entry.formParts) {
+    return entry.formParts.map(
+      (part) => `  -F '${shellQuote(part.name)}=${shellQuote(part.value)}'`
+    );
+  }
+  if (entry.requestBody) {
+    return [`  -H 'Content-Type: application/json'`, `  --data '${shellQuote(entry.requestBody)}'`];
+  }
+  return [];
+}
+
 /**
- * Rebuild the call as a runnable curl.
- *
- * The token deliberately does NOT appear: it lives in an httpOnly cookie the
- * browser never exposes to JS. `--cookie` with the browser's jar is the closest
- * replayable equivalent; for a terminal-only run, log in with the auth route
- * first and reuse that cookie jar.
+ * The call as it left the browser: same-origin, against the BFF. Replayable only
+ * with the browser's cookie jar, because the token lives in an httpOnly cookie
+ * that JS cannot read — which is the whole point of the BFF auth model.
  */
 export function toCurl(entry: ApiLogEntry): string {
-  const lines = [`curl -X ${entry.method} '${entry.absoluteUrl}'`];
+  return [
+    `curl -X ${entry.method} '${entry.absoluteUrl}'`,
+    ...bodyLines(entry),
+    `  -b cookies.txt   # đăng nhập trước: curl -X POST '<origin>/api/auth/login' -c cookies.txt -H 'Content-Type: application/json' -d '{"email":"…","password":"…"}'`,
+  ].join(' \\\n');
+}
 
-  if (entry.formParts) {
-    entry.formParts.forEach((part) => {
-      lines.push(`  -F '${part.name}=${part.value}'`);
-    });
-  } else if (entry.requestBody) {
-    lines.push(`  -H 'Content-Type: application/json'`);
-    lines.push(`  --data '${entry.requestBody.replace(/'/g, `'\\''`)}'`);
-  }
+/**
+ * The same call aimed straight at docs-hub-api, for handing to the backend team.
+ *
+ * The BFF strips its own `/api` prefix and forwards the rest verbatim, so the
+ * upstream path is recoverable from the browser URL. `$TOKEN` stays a
+ * placeholder: the real one is in an httpOnly cookie this code cannot read, and
+ * pasting a live token into a shareable snippet would leak it anyway.
+ */
+export function toUpstreamCurl(entry: ApiLogEntry, apiBase = 'https://api.docshub.io.vn'): string {
+  const path = new URL(entry.absoluteUrl).pathname.replace(/^.*?\/api\//, '/');
+  const search = new URL(entry.absoluteUrl).search;
 
-  lines.push(`  -b cookies.txt   # đăng nhập trước: POST /api/auth/login -c cookies.txt`);
-  return lines.join(' \\\n');
+  return [
+    `curl -X ${entry.method} '${apiBase}${path}${search}'`,
+    `  -H 'Authorization: Bearer $TOKEN'`,
+    ...bodyLines(entry),
+  ].join(' \\\n');
 }
