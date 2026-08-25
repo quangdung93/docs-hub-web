@@ -221,6 +221,9 @@ export const vi = {
   'chat.empty.description': 'Đặt câu hỏi về tài liệu trong dự án, câu trả lời luôn kèm trích dẫn.',
   'chat.footnote':
     'Bấm trích dẫn [1] / [2] để làm nổi bật đoạn nguồn. Thử gõ một câu hỏi rồi bấm gửi.',
+  'chat.conversations.new': 'Cuộc trò chuyện mới',
+  'chat.conversations.empty': 'Chưa có cuộc trò chuyện nào.',
+  'chat.conversations.untitled': 'Chưa đặt tên',
   'chat.citations.title': 'Nguồn trích dẫn',
   'chat.citations.resize': 'Kéo để đổi độ rộng bảng nguồn',
   'chat.citations.close': 'Đóng bảng trích dẫn',

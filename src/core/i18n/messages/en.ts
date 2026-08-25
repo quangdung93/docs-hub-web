@@ -219,6 +219,9 @@ export const en: Record<MessageKey, string> = {
     'Ask a question about this project’s documents — every answer comes with citations.',
   'chat.footnote':
     'Click citation [1] / [2] to highlight the source passage. Try typing a question and sending it.',
+  'chat.conversations.new': 'New conversation',
+  'chat.conversations.empty': 'No conversations yet.',
+  'chat.conversations.untitled': 'Untitled',
   'chat.citations.title': 'Cited sources',
   'chat.citations.resize': 'Resize the sources panel',
   'chat.citations.close': 'Close citation panel',

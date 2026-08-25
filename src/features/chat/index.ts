@@ -2,6 +2,7 @@ export { ChatComposer } from './components/chat-composer';
 export { ChatMessage } from './components/chat-message';
 export { ChatScreen } from './components/chat-screen';
 export { CitationPanel } from './components/citation-panel';
+export { ConversationList } from './components/conversation-list';
 export {
   conversationQueryOptions,
   conversationsQueryOptions,

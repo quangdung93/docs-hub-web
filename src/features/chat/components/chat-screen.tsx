@@ -15,6 +15,7 @@ import { useChat } from '../hooks/use-chat';
 import { ChatComposer } from './chat-composer';
 import { ChatMessage } from './chat-message';
 import { CitationPanel } from './citation-panel';
+import { ConversationList } from './conversation-list';
 
 /**
  * Q&A screen: transcript on the left, cited sources on the right. The active
@@ -24,7 +25,13 @@ import { CitationPanel } from './citation-panel';
 export function ChatScreen({ projectId }: { projectId: string }) {
   const { t } = useI18n();
   const { data: project } = useProject(projectId);
-  const { messages, isLoading, ask: askQuestion } = useChat(projectId);
+  const {
+    conversationId,
+    setConversationId,
+    messages,
+    isLoading,
+    ask: askQuestion,
+  } = useChat(projectId);
 
   const [activeCitation, setActiveCitation] = useState<number | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
@@ -47,10 +54,26 @@ export function ChatScreen({ projectId }: { projectId: string }) {
     setActiveCitation(index);
   };
 
+  /**
+   * Switching conversations must clear the highlighted citation: the index is
+   * positional, so a stale `[2]` would light up an unrelated excerpt in the new
+   * transcript.
+   */
+  const selectConversation = (id: string | null) => {
+    setActiveCitation(null);
+    setConversationId(id);
+  };
+
   return (
     <>
       <Card>
         <div className="flex h-[640px]">
+          <ConversationList
+            projectId={projectId}
+            activeId={conversationId}
+            onSelect={selectConversation}
+          />
+
           <main className="flex min-w-0 flex-1 flex-col">
             <div className="border-border flex items-center justify-between gap-3 border-b px-5 py-3">
               <div className="flex min-w-0 items-center gap-3">
