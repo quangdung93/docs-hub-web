@@ -1,11 +1,12 @@
 'use client';
 
-import { MessageSquarePlus, MessagesSquare } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { MessageSquarePlus, MessagesSquare, Trash2 } from 'lucide-react';
 
 import { useI18n } from '@/core/i18n';
 import { formatRelativeTime } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
-import { Skeleton } from '@/shared/ui';
+import { ConfirmDialog, Skeleton } from '@/shared/ui';
 
 import { useConversations } from '../hooks/use-chat';
 
@@ -30,6 +31,29 @@ export function ConversationList({
 }) {
   const { t, locale } = useI18n();
   const { data: conversations, isPending } = useConversations(projectId);
+
+  /** Right-click target: viewport coordinates plus the row it belongs to. */
+  const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(null);
+  const [notice, setNotice] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Any click elsewhere, Escape, or a scroll dismisses the menu — it is
+  // absolutely positioned, so scrolling would leave it floating over the wrong row.
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menu]);
 
   return (
     <aside className="border-border bg-surface-muted/30 hidden w-60 shrink-0 flex-col border-r lg:flex">
@@ -67,6 +91,10 @@ export function ConversationList({
                 <button
                   type="button"
                   onClick={() => onSelect(conversation.id)}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setMenu({ x: event.clientX, y: event.clientY, id: conversation.id });
+                  }}
                   className={cn(
                     'w-full rounded-md px-2.5 py-2 text-left transition-colors',
                     conversation.id === activeId ? 'bg-brand-subtle text-brand' : 'hover:bg-accent'
@@ -89,6 +117,44 @@ export function ConversationList({
           </ul>
         )}
       </div>
+
+      {/* Fixed, not absolute: the list scrolls, and the menu must stay where the
+          pointer opened it rather than travel with the row. */}
+      {menu && (
+        <div
+          ref={menuRef}
+          role="menu"
+          style={{ left: menu.x, top: menu.y }}
+          onPointerDown={(event) => event.stopPropagation()}
+          className="border-border bg-surface fixed z-50 min-w-44 rounded-lg border p-1 shadow-lg"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setMenu(null);
+              setNotice(true);
+            }}
+            className="text-status-failed hover:bg-status-failed-bg/60 flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm transition-colors"
+          >
+            <Trash2 className="size-3.5" aria-hidden />
+            {t('chat.conversations.delete')}
+          </button>
+        </div>
+      )}
+
+      {/* Deliberately a dead end for now: docs-hub-api has no DELETE for a
+          conversation, so the menu says what will exist rather than pretending. */}
+      <ConfirmDialog
+        open={notice}
+        title={t('chat.conversations.delete')}
+        description={t('common.comingSoon')}
+        confirmLabel={t('common.done')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => setNotice(false)}
+        onCancel={() => setNotice(false)}
+        variant="notice"
+      />
     </aside>
   );
 }

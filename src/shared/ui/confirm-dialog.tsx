@@ -21,6 +21,7 @@ export function ConfirmDialog({
   pending,
   confirmPhrase,
   confirmPhraseLabel,
+  variant = 'confirm',
 }: {
   open: boolean;
   title: string;
@@ -38,6 +39,11 @@ export function ConfirmDialog({
    */
   confirmPhrase?: string;
   confirmPhraseLabel?: string;
+  /**
+   * Acknowledgement instead of a decision: one neutral button, no cancel and no
+   * destructive styling. For telling the user something, not asking them.
+   */
+  variant?: 'confirm' | 'notice';
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [typed, setTyped] = useState('');
@@ -91,12 +97,14 @@ export function ConfirmDialog({
         )}
 
         <div className="mt-5 flex items-center justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
-            {cancelLabel}
-          </Button>
+          {variant === 'confirm' && (
+            <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
+              {cancelLabel}
+            </Button>
+          )}
           <Button
             type="button"
-            variant="destructive"
+            variant={variant === 'notice' ? 'default' : 'destructive'}
             onClick={() => onConfirm(typed.trim())}
             disabled={pending || !phraseSatisfied}
           >

@@ -13,6 +13,7 @@ export const vi = {
   'common.skip': 'Bỏ qua',
   'common.finish': 'Hoàn tất',
   'common.done': 'Xong',
+  'common.comingSoon': 'Tính năng đang phát triển.',
   'common.save': 'Lưu thay đổi',
   'common.search': 'Tìm kiếm',
   'common.previous': '‹ Trước',
@@ -221,6 +222,7 @@ export const vi = {
   'chat.empty.description': 'Đặt câu hỏi về tài liệu trong dự án, câu trả lời luôn kèm trích dẫn.',
   'chat.footnote':
     'Bấm trích dẫn [1] / [2] để làm nổi bật đoạn nguồn. Thử gõ một câu hỏi rồi bấm gửi.',
+  'chat.conversations.delete': 'Xoá đoạn chat',
   'chat.conversations.new': 'Cuộc trò chuyện mới',
   'chat.conversations.empty': 'Chưa có cuộc trò chuyện nào.',
   'chat.conversations.untitled': 'Chưa đặt tên',
