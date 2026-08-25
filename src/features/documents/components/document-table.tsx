@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/shared/ui';
 
+import { documentsApi } from '../api/documents.api';
 import { useDeleteDocument, useDocuments } from '../hooks/use-documents';
 import { formatBytes, matchesFormat } from '../services/upload-queue.service';
 import type { DocumentFormat, DocumentStatus } from '../schemas/document.schema';
@@ -136,7 +137,28 @@ export function DocumentTable({
 
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
-                    <IconButton icon={Download} size="sm" label={t('documents.action.download')} />
+                    {/* A plain link, not a fetch: the response carries
+                        `Content-Disposition: attachment` with the real filename,
+                        so the browser saves it correctly on its own. Disabled
+                        until the row knows its revision — every per-file action
+                        addresses the revision, not the document. */}
+                    {document.revisionId ? (
+                      <a
+                        href={documentsApi.downloadUrl(projectId, document.id, document.revisionId)}
+                        download
+                        aria-label={t('documents.action.download')}
+                        className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/40 inline-flex size-8 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                      >
+                        <Download className="size-4" aria-hidden />
+                      </a>
+                    ) : (
+                      <IconButton
+                        icon={Download}
+                        size="sm"
+                        label={t('documents.action.download')}
+                        disabled
+                      />
+                    )}
                     <IconButton
                       icon={Trash2}
                       size="sm"

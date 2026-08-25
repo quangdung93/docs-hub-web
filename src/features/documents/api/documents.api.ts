@@ -28,6 +28,9 @@ import { type Document } from '../schemas/document.schema';
  * went out, so dropping it is a straight win for large uploads.
  */
 
+/** Same-origin BFF prefix, mirroring the Axios instance's baseURL. */
+const API_BASE = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api`;
+
 export interface DocumentListParams {
   page?: number;
   limit?: number;
@@ -174,12 +177,15 @@ export const documentsApi = {
    * Download / inline-view URLs. These are same-origin BFF paths, not presigned
    * storage links, so the browser can hit them directly and the proxy attaches
    * the bearer token — no credentials end up in a URL.
+   *
+   * The base path matters: served under `mobix.asia/docshub_su5`, a bare `/api`
+   * misses the mount point entirely and 404s.
    */
   downloadUrl: (projectId: string, documentId: string, revisionId: string): string =>
-    `/api${endpoints.documents.revisionDownload(projectId, documentId, revisionId)}`,
+    `${API_BASE}${endpoints.documents.revisionDownload(projectId, documentId, revisionId)}`,
 
   viewUrl: (projectId: string, documentId: string, revisionId: string): string =>
-    `/api${endpoints.documents.revisionView(projectId, documentId, revisionId)}`,
+    `${API_BASE}${endpoints.documents.revisionView(projectId, documentId, revisionId)}`,
 };
 
 /**

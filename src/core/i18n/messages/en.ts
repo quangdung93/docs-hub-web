@@ -220,6 +220,7 @@ export const en: Record<MessageKey, string> = {
   'chat.footnote':
     'Click citation [1] / [2] to highlight the source passage. Try typing a question and sending it.',
   'chat.citations.title': 'Cited sources',
+  'chat.citations.resize': 'Resize the sources panel',
   'chat.citations.close': 'Close citation panel',
   'chat.citations.source': '{scope} · relevant passages',
   'chat.citations.pages': 'Pages {pages} · relevant passages',

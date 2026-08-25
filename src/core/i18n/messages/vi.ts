@@ -222,6 +222,7 @@ export const vi = {
   'chat.footnote':
     'Bấm trích dẫn [1] / [2] để làm nổi bật đoạn nguồn. Thử gõ một câu hỏi rồi bấm gửi.',
   'chat.citations.title': 'Nguồn trích dẫn',
+  'chat.citations.resize': 'Kéo để đổi độ rộng bảng nguồn',
   'chat.citations.close': 'Đóng bảng trích dẫn',
   'chat.citations.source': '{scope} · đoạn liên quan',
   'chat.citations.pages': 'Trang {pages} · đoạn liên quan',

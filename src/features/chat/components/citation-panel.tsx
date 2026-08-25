@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/utils';
 import { IconButton } from '@/shared/ui';
 
 import type { Citation } from '../schemas/chat.schema';
+import { useResizablePanel } from '../hooks/use-resizable-panel';
 import { pageRangeOf } from '../services/citation.service';
 
 /**
@@ -37,9 +38,41 @@ export function CitationPanel({
   // would leave "Pages  · relevant passages" hanging. Fall back to the version
   // the chunks came from — that is what actually locates them.
   const scopeLabel = citations[0]?.scopeLabel;
+  const { width, isDragging, startDrag, nudge, min, max } = useResizablePanel();
 
   return (
-    <aside className="border-border bg-surface-muted/40 hidden w-80 shrink-0 flex-col border-l lg:flex">
+    <aside
+      className="border-border bg-surface-muted/40 relative hidden shrink-0 flex-col border-l lg:flex"
+      style={{ width }}
+    >
+      {/* Drag handle. Sits just outside the border and is only tinted on hover,
+          so it reads as an affordance without drawing a second visible line. */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={t('chat.citations.resize')}
+        aria-valuenow={width}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        tabIndex={0}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          startDrag();
+        }}
+        onKeyDown={(event) => {
+          // Arrows only: the panel is docked right, so left widens it.
+          if (event.key === 'ArrowLeft') nudge(24);
+          else if (event.key === 'ArrowRight') nudge(-24);
+          else return;
+          event.preventDefault();
+        }}
+        className={cn(
+          'absolute top-0 -left-1 z-10 h-full w-2 cursor-col-resize',
+          'hover:bg-brand/30 focus-visible:bg-brand/40 focus-visible:outline-none',
+          isDragging && 'bg-brand/40'
+        )}
+      />
+
       <div className="border-border flex items-center justify-between border-b px-4 py-3">
         <span className="text-sm font-medium">{t('chat.citations.title')}</span>
         <IconButton icon={X} size="sm" label={t('chat.citations.close')} onClick={onClose} />
@@ -68,7 +101,10 @@ export function CitationPanel({
                   else refs.current.delete(citation.index);
                 }}
                 className={cn(
-                  'bg-surface mt-3 rounded-lg border p-3 text-sm leading-relaxed transition-colors',
+                  // `break-words`: excerpts are raw document text, and an XML
+                  // attribute or a long URL has no break opportunity — without it
+                  // the string overflows the panel and gets clipped mid-word.
+                  'bg-surface mt-3 rounded-lg border p-3 text-sm leading-relaxed break-words transition-colors',
                   citation.index === activeIndex
                     ? 'border-brand ring-brand/20 bg-brand-subtle/60 ring-[3px]'
                     : 'border-border text-muted-foreground'
