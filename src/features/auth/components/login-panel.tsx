@@ -26,12 +26,7 @@ export function LoginPanel({ children }: { children: ReactNode }) {
 
         {children}
 
-        <p className="border-border bg-surface-muted text-muted-foreground mt-6 rounded-md border px-3 py-2 text-center text-xs">
-          Demo: <span className="font-medium">admin@docs-hub.local</span> /{' '}
-          <span className="font-medium">Password123!</span>
-        </p>
-
-        <p className="text-muted-foreground mt-3 text-center text-xs">{t('login.needAccount')}</p>
+        <p className="text-muted-foreground mt-6 text-center text-xs">{t('login.needAccount')}</p>
       </div>
     </div>
   );

@@ -42,7 +42,8 @@ export function toProjectMember(dto: ProjectMemberDto): ProjectMember {
   return {
     id: dto.id,
     userId: dto.user_id,
-    name: null,
+    name: dto.user?.full_name ?? null,
+    email: dto.user?.email ?? null,
     jobTitle: null,
     // A pending invite is a distinct row state in the UI, but the backend keeps
     // role and status separate — collapse them the way the table renders them.

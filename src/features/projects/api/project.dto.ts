@@ -31,6 +31,11 @@ export const ProjectDtoSchema = z.object({
   created_at: z.string(),
 });
 
+/**
+ * `user` was added by the backend on 25/08/2026 — before that a member row
+ * carried `user_id` only and the table had no name to show. It stays optional so
+ * a rollback on either side degrades to the id instead of failing the parse.
+ */
 export const ProjectMemberDtoSchema = z.object({
   id: z.string(),
   project_id: z.string(),
@@ -39,6 +44,13 @@ export const ProjectMemberDtoSchema = z.object({
   status: z.enum(['pending', 'active']),
   invited_at: z.string(),
   joined_at: z.string().nullish(),
+  user: z
+    .object({
+      id: z.string(),
+      full_name: z.string().nullish(),
+      email: z.string().nullish(),
+    })
+    .nullish(),
 });
 
 export const AvatarUploadUrlDtoSchema = z.object({

@@ -49,12 +49,16 @@ export const UpdateProjectInputSchema = CreateProjectInputSchema.extend({
 
 export const MemberRoleSchema = z.enum(['owner', 'editor', 'viewer', 'pending']);
 
-/** `name`/`jobTitle` are null until the backend joins user identity into the
- *  member list (today it returns `user_id` only). */
+/**
+ * `name`/`email` come from the `user` object the member list started returning
+ * on 25/08/2026; both stay nullable so a row still renders (by id) if it is
+ * absent. `jobTitle` has no source yet — the backend does not model it.
+ */
 export const ProjectMemberSchema = z.object({
   id: z.string(),
   userId: z.string(),
   name: z.string().nullable(),
+  email: z.string().nullable(),
   jobTitle: z.string().nullable(),
   role: MemberRoleSchema,
   joinedAt: z.string().nullable(),

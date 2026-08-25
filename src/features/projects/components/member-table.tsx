@@ -58,12 +58,12 @@ export function MemberTable({ projectId }: { projectId: string }) {
   const { data: members, isPending } = useProjectMembers(projectId);
   const [search, setSearch] = useState('');
 
-  // The API returns `user_id` only — no name, email or job title — so search
-  // falls back to the id until the backend joins user identity into this list.
+  // Name and email arrive with the member row; the id stays in the haystack so a
+  // member the backend could not resolve is still findable by what is shown.
   const query = search.trim().toLowerCase();
   const visible = (members ?? []).filter((member) => {
     if (!query) return true;
-    const haystack = [member.name, member.jobTitle, member.userId]
+    const haystack = [member.name, member.email, member.jobTitle, member.userId]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();
@@ -124,7 +124,7 @@ export function MemberTable({ projectId }: { projectId: string }) {
                           {member.name ?? `#${member.userId.slice(0, 8)}`}
                         </div>
                         <div className="text-muted-foreground text-xs">
-                          {member.jobTitle ?? t('members.unknownIdentity')}
+                          {member.email ?? member.jobTitle ?? t('members.unknownIdentity')}
                         </div>
                       </div>
                     </div>

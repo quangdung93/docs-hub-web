@@ -80,7 +80,6 @@ export const endpoints = {
       `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/view`,
   },
 
-  // ── In Swagger but NOT routed on the deployed build ──────────────────────
   // Deployed and wired against the real API since 24/08/2026 — note Swagger was
   // NOT regenerated, so it still documents these responses as a bare
   // `response.Envelope`. The shapes in `features/chat/api/chat.dto.ts` come from
