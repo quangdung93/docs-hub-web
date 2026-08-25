@@ -2,7 +2,6 @@ import axios, { type AxiosError, type AxiosInstance } from 'axios';
 
 import { ApiEnvelopeSchema } from '@/core/api/envelope';
 import { AppError, ERROR_CODE } from '@/core/api/errors';
-import { logError, logRequestStart, logResponse } from './api-log';
 
 /**
  * Client-side transport. Lives in `shared/` (not `core/`) on purpose: Axios is
@@ -38,30 +37,12 @@ http.interceptors.request.use((config) => {
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     delete config.headers['Content-Type'];
   }
-  // Feeds the API inspector (floating button). Browser-only: on the server there
-  // is no inspector to read it, and the module-level buffer would leak per request.
-  if (typeof window !== 'undefined') {
-    config.headers['x-api-log-id'] = logRequestStart(config);
-  }
   return config;
 });
 
-/** The id we stamped on the way out, read back off the echoed request config. */
-function logIdOf(config: unknown): string | undefined {
-  const headers = (config as { headers?: Record<string, unknown> } | undefined)?.headers;
-  const id = headers?.['x-api-log-id'];
-  return typeof id === 'string' ? id : undefined;
-}
-
 http.interceptors.response.use(
-  (response) => {
-    if (typeof window !== 'undefined') logResponse(logIdOf(response.config), response);
-    return response;
-  },
-  (error: AxiosError) => {
-    if (typeof window !== 'undefined') logError(logIdOf(error.config), error);
-    return Promise.reject(normalizeAxiosError(error));
-  }
+  (response) => response,
+  (error: AxiosError) => Promise.reject(normalizeAxiosError(error))
 );
 
 /** Map any Axios failure (backend envelope, network, timeout, cancel) to AppError. */

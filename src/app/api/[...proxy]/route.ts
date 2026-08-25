@@ -22,8 +22,6 @@ const STRIPPED_REQUEST_HEADERS = new Set([
   'cookie',
   'connection',
   'content-length',
-  // Client-side correlation id for the API inspector — meaningless upstream.
-  'x-api-log-id',
   /**
    * `origin` and `referer` describe the *browser's* page, not this server-to-
    * server hop, so they are meaningless upstream — and docs-hub-api answers a
