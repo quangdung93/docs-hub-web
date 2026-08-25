@@ -64,6 +64,13 @@ assert.equal(
   'done'
 );
 
+// `ready` on the RAGFlow side is also terminal — it appeared when RAGFlow was
+// connected on 25/08/2026, alongside a `ragflow_synced_at` that stops changing.
+// Reading it as in-progress would poll a settled row forever.
+const ragflowReady = toIngestionStage(rev({ status: 'ready', ragflow_sync_status: 'ready' }));
+assert.equal(ragflowReady.step, 'done');
+assert.equal(ragflowReady.isRunning, false);
+
 // ── Failures ────────────────────────────────────────────────────────────────
 
 // Backend pipeline failed: the file never reached RAGFlow, so the break is at

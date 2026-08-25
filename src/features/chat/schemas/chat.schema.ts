@@ -1,22 +1,28 @@
 import { z } from 'zod';
 
 /**
- * Chat contracts. A citation is a first-class object (not a marker parsed out of
- * the answer text) so the UI can render the source panel, the inline `[n]`
- * buttons and the source chips from one structure.
+ * A source backing an answer. Shape confirmed against the live API on
+ * 25/08/2026, once RAGFlow was connected.
  *
- * Every field except `index` is optional: the backend has never returned a
- * populated citation (RAGFlow is not connected, so answers come back
- * `grounded: false`), and the real element shape is still unknown. The mapper
- * fills what it recognises and the UI degrades to what it has.
+ * `index` is derived from position, not sent: the backend keys citations `"S1"`,
+ * `"S2"` and does NOT put matching markers in the answer text, so these are a
+ * source list rather than inline anchors. `page` is optional because the backend
+ * returns null bounds for every format observed so far.
  */
 export const CitationSchema = z.object({
-  /** 1-based marker as it appears in the answer text. */
+  /** 1-based position, used for the visible marker. */
   index: z.number().int().positive(),
+  /** Backend key (`"S1"`), kept so a citation can be traced back to its chunk. */
+  key: z.string().optional(),
   documentId: z.string().optional(),
+  revisionId: z.string().optional(),
   documentName: z.string().optional(),
+  /** Which version/change request the chunk came from, e.g. `"v1.0.0"`. */
+  scopeLabel: z.string().optional(),
   page: z.number().int().positive().optional(),
   excerpt: z.string().optional(),
+  /** Same-origin path to view the source revision. */
+  sourceUrl: z.string().optional(),
 });
 
 export const ChatMessageSchema = z.object({

@@ -223,6 +223,7 @@ export const vi = {
     'Bấm trích dẫn [1] / [2] để làm nổi bật đoạn nguồn. Thử gõ một câu hỏi rồi bấm gửi.',
   'chat.citations.title': 'Nguồn trích dẫn',
   'chat.citations.close': 'Đóng bảng trích dẫn',
+  'chat.citations.source': '{scope} · đoạn liên quan',
   'chat.citations.pages': 'Trang {pages} · đoạn liên quan',
   'chat.citations.page': 'trang {page}',
   'chat.citations.empty': 'Chọn một trích dẫn để xem đoạn nguồn.',

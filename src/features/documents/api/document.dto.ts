@@ -43,7 +43,8 @@ export const RevisionDtoSchema = z.object({
   file_name: z.string(),
   media_type: z.string(),
   size_bytes: z.number().int().nonnegative(),
-  sha256: z.string(),
+  /** Computed server-side since 25/08/2026; clients no longer send it. */
+  sha256: z.string().nullish(),
   status: z.string(),
   error_code: z.string().nullish(),
   error_detail: z.string().nullish(),

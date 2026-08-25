@@ -32,14 +32,19 @@ export type IngestionStage = {
 /**
  * Backend `status` values seen so far: `queued`, `ready`, `indexed`,
  * `completed`, `failed`, `error`. RAGFlow mirror: null/empty, `pending`,
- * `syncing`, `synced`, `completed`, `failed`.
+ * `syncing`, `synced`, `completed`, `ready`, `failed`.
+ *
+ * `ready` on the RAGFlow side means finished, not "about to start" — confirmed
+ * on 25/08/2026: a revision reading `ragflow_sync_status: ready` also carries a
+ * `ragflow_synced_at` timestamp that stops changing, and its chunks answer
+ * `/search`. Reading it as in-progress would poll a settled row forever.
  *
  * Anything unrecognised is treated as in-progress rather than crashing the row —
  * `status` is a bare string on the wire, so new values can appear at any deploy.
  */
 const FAILED = new Set(['failed', 'error']);
 const NOT_STARTED = new Set(['queued', 'pending']);
-const SYNC_DONE = new Set(['synced', 'completed']);
+const SYNC_DONE = new Set(['synced', 'completed', 'ready']);
 const PARSE_DONE = new Set(['indexed', 'completed', 'ready']);
 
 function normalise(value: string | null | undefined): string {

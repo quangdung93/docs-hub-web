@@ -2,6 +2,7 @@ import {
   type AskResultDto,
   type ChatMessageDto,
   type ChatScopeDto,
+  type CitationDto,
   type ConversationDto,
 } from '../api/chat.dto';
 import {
@@ -15,49 +16,36 @@ import {
 /**
  * Wire → domain mapping for chat.
  *
- * The one piece of real work here is `toCitation`. The backend has never
- * returned a populated `citations` array (RAGFlow is not connected, so every
- * answer is `grounded: false`), so the element shape is unknown. Rather than
- * guess one schema and crash on the first real payload, this reads the field
- * names the backend uses elsewhere for the same concepts, accepts the common
- * aliases, and keeps whatever it recognises.
- *
- * ponytail: alias list, not a parser. Replace with a plain Zod schema the day a
- * real citation is observed — this function is the only thing that has to change.
+ * The citation shape is no longer guessed: it was confirmed against the live API
+ * on 25/08/2026 once RAGFlow was connected, so this reads the real fields
+ * directly. `index` is derived from position because the backend keys citations
+ * `"S1"`/`"S2"` and puts no matching markers in the answer text.
  */
-function pick(source: Record<string, unknown>, ...keys: string[]): unknown {
-  for (const key of keys) {
-    const value = source[key];
-    if (value !== undefined && value !== null) return value;
-  }
-  return undefined;
+function trimmed(value: string | null | undefined): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
+function positiveInt(value: number | null | undefined): number | undefined {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined;
 }
 
-function asPositiveInt(value: unknown): number | undefined {
-  const parsed = typeof value === 'string' ? Number(value) : value;
-  return typeof parsed === 'number' && Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-export function toCitation(raw: unknown, fallbackIndex: number): Citation {
-  if (typeof raw !== 'object' || raw === null) return { index: fallbackIndex };
-
-  const source = raw as Record<string, unknown>;
+export function toCitation(dto: CitationDto, position: number): Citation {
   return {
-    index: asPositiveInt(pick(source, 'index', 'marker', 'n')) ?? fallbackIndex,
-    documentId: asString(pick(source, 'document_id', 'documentId', 'doc_id')),
-    documentName: asString(
-      pick(source, 'document_name', 'documentName', 'file_name', 'title', 'name')
-    ),
-    page: asPositiveInt(pick(source, 'page', 'page_number', 'page_no')),
-    excerpt: asString(pick(source, 'excerpt', 'content', 'text', 'chunk', 'snippet')),
+    index: position,
+    key: trimmed(dto.key),
+    documentId: trimmed(dto.document_id),
+    revisionId: trimmed(dto.document_revision_id),
+    documentName: trimmed(dto.document_name),
+    scopeLabel: trimmed(dto.scope_label),
+    // Only `page_start` is shown: a range needs both ends, and every format seen
+    // so far returns null for both.
+    page: positiveInt(dto.page_start),
+    excerpt: trimmed(dto.excerpt),
+    sourceUrl: trimmed(dto.source_url),
   };
 }
 
-function toCitations(raw: unknown[] | null | undefined): Citation[] {
+function toCitations(raw: CitationDto[] | null | undefined): Citation[] {
   return (raw ?? []).map((item, position) => toCitation(item, position + 1));
 }
 

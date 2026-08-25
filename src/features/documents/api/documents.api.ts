@@ -18,22 +18,15 @@ import { type Document } from '../schemas/document.schema';
 /**
  * Documents transport for docs-hub-api.
  *
- * Two things this layer owns, because the backend requires them and no component
- * should have to know:
+ * One thing this layer owns, because the backend requires it and no component
+ * should have to know: **scope**. An upload belongs to exactly one project
+ * version (or change request); sending neither — or both — is a `REQ_400`.
  *
- *  1. **SHA-256.** Every upload must carry a hex digest of the file; the server
- *     recomputes it and rejects a mismatch with `REQ_400`.
- *  2. **Scope.** An upload belongs to exactly one project version (or change
- *     request). Sending neither — or both — is a `REQ_400`.
+ * `sha256` used to be mandatory and is no longer sent (Swagger dropped it on
+ * 25/08/2026, and the running build accepts uploads without it). Computing it
+ * meant reading the whole file into memory via WebCrypto before a single byte
+ * went out, so dropping it is a straight win for large uploads.
  */
-
-/** Hex SHA-256 of a file, computed in the browser via WebCrypto. */
-export async function sha256Hex(file: Blob): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-}
 
 export interface DocumentListParams {
   page?: number;
@@ -111,7 +104,6 @@ export const documentsApi = {
   upload: async (projectId: string, file: File, options: UploadOptions): Promise<Document> => {
     const form = new FormData();
     form.append('file', file);
-    form.append('sha256', await sha256Hex(file));
     form.append('size_bytes', String(file.size));
     // The real backend reads the name off the multipart part itself; sending it
     // as a field too costs nothing and keeps the MSW mock (whose parser drops the

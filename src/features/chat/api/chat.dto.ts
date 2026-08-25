@@ -20,20 +20,42 @@ export const ChatScopeDtoSchema = z.object({
 });
 
 /**
+ * One retrieved chunk backing an answer. Observed 25/08/2026, once RAGFlow was
+ * connected and answers started coming back `grounded: true`.
+ *
+ * Two things differ from a typical citation format. The marker is `key` (`"S1"`,
+ * `"S2"`), not a number — and the answer text does NOT carry `[1]`-style markers
+ * pointing at them, so citations are a source list rather than inline anchors.
+ * Line and page bounds exist in the contract but arrive null for every format
+ * seen so far, which is why the UI cannot rely on a page number.
+ */
+export const CitationDtoSchema = z.object({
+  key: z.string(),
+  chunk_id: z.string().nullish(),
+  document_id: z.string().nullish(),
+  document_revision_id: z.string().nullish(),
+  document_name: z.string().nullish(),
+  scope_type: z.string().nullish(),
+  scope_label: z.string().nullish(),
+  line_start: z.number().nullish(),
+  line_end: z.number().nullish(),
+  page_start: z.number().nullish(),
+  page_end: z.number().nullish(),
+  excerpt: z.string().nullish(),
+  /** Same-origin path to the source revision — ready for the BFF, no host. */
+  source_url: z.string().nullish(),
+});
+
+/**
  * A message inside a conversation. Assistant rows carry the extra generation
  * metadata (`intent`, `prompt_version`, `latency_ms`); user rows do not, so all
  * of it is optional.
- *
- * `citations` has never been observed populated — every answer so far comes back
- * `grounded: false` because RAGFlow is not connected yet, so the element shape is
- * still unknown. It stays `unknown[]` deliberately: a guessed object schema would
- * throw on the first real citation and take the whole chat screen down with it.
  */
 export const ChatMessageDtoSchema = z.object({
   id: z.string(),
   role: z.enum(['user', 'assistant']),
   content: z.string(),
-  citations: z.array(z.unknown()).nullish(),
+  citations: z.array(CitationDtoSchema).nullish(),
   intent: z.string().nullish(),
   prompt_version: z.string().nullish(),
   latency_ms: z.number().nullish(),
@@ -68,10 +90,11 @@ export const AskResultDtoSchema = z.object({
   answer: z.string(),
   intent: z.string().nullish(),
   resolved_scope: z.array(z.unknown()).nullish(),
-  citations: z.array(z.unknown()).nullish(),
+  citations: z.array(CitationDtoSchema).nullish(),
   grounded: z.boolean().nullish(),
 });
 
+export type CitationDto = z.infer<typeof CitationDtoSchema>;
 export type ChatScopeDto = z.infer<typeof ChatScopeDtoSchema>;
 export type ChatMessageDto = z.infer<typeof ChatMessageDtoSchema>;
 export type ConversationDto = z.infer<typeof ConversationDtoSchema>;

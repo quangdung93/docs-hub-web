@@ -2,50 +2,61 @@
  * Self-check for the chat mapper. Run with
  * `npx tsx src/features/chat/services/chat.mapper.test.ts`.
  *
- * The interesting case is `toCitation`: the backend has never returned a
- * populated citation, so it accepts several plausible field spellings. These
- * assertions pin that behaviour down — when a real citation is finally observed,
- * a failure here says the guess was wrong.
+ * The citation case is pinned to a payload copied verbatim from a
+ * `grounded: true` answer on 25/08/2026 — the first real one the backend
+ * produced, once RAGFlow was connected.
  */
 import assert from 'node:assert/strict';
 
 import { toChatScope, toCitation, toConversation, toScopeDto } from './chat.mapper';
 
-// ── Citations ───────────────────────────────────────────────────────────────
+// ── Citations ──────────────────────────────────────────────────────────────
 
-// snake_case, the spelling the rest of this API uses.
+// The real payload, copied from a `grounded: true` answer on 25/08/2026.
 assert.deepEqual(
   toCitation(
-    { index: 2, document_id: 'doc-1', document_name: 'KYC.pdf', page: 4, excerpt: 'text' },
-    99
+    {
+      key: 'S1',
+      chunk_id: 'e5447b2ac95f35a4',
+      document_id: 'e2d89634-d938-4dd9-93fa-b35676d7cb42',
+      document_revision_id: '12152042-91ad-4866-a162-f1e70ab26c8f',
+      document_name: 'docx_sach.docx',
+      scope_type: 'version',
+      scope_label: 'v1.0.0',
+      line_start: null,
+      line_end: null,
+      page_start: null,
+      page_end: null,
+      excerpt: 'Quy trinh kiem thu DOCX',
+      source_url: '/internal/api/v1/projects/p/documents/d/revisions/r/view',
+    },
+    1
   ),
-  { index: 2, documentId: 'doc-1', documentName: 'KYC.pdf', page: 4, excerpt: 'text' }
+  {
+    index: 1,
+    key: 'S1',
+    documentId: 'e2d89634-d938-4dd9-93fa-b35676d7cb42',
+    revisionId: '12152042-91ad-4866-a162-f1e70ab26c8f',
+    documentName: 'docx_sach.docx',
+    scopeLabel: 'v1.0.0',
+    page: undefined,
+    excerpt: 'Quy trinh kiem thu DOCX',
+    sourceUrl: '/internal/api/v1/projects/p/documents/d/revisions/r/view',
+  }
 );
 
-// camelCase and the alternative names are accepted too.
-assert.deepEqual(toCitation({ documentId: 'd', title: 'A.pdf', page_number: 7, content: 'x' }, 1), {
-  index: 1,
-  documentId: 'd',
-  documentName: 'A.pdf',
-  page: 7,
-  excerpt: 'x',
-});
+// `index` comes from position — the backend key is "S1", not a number, and the
+// answer text carries no matching marker to line up with.
+assert.equal(toCitation({ key: 'S3' }, 3).index, 3);
 
-// Missing index falls back to position, so markers still line up 1..n.
-assert.equal(toCitation({ excerpt: 'x' }, 3).index, 3);
+// Null bounds (every format observed so far) must not become a page 0.
+assert.equal(toCitation({ key: 'S1', page_start: null }, 1).page, undefined);
+assert.equal(toCitation({ key: 'S1', page_start: 0 }, 1).page, undefined);
+assert.equal(toCitation({ key: 'S1', page_start: 4 }, 1).page, 4);
 
-// Garbage never throws — a citation that cannot be read still renders its marker.
-assert.deepEqual(toCitation(null, 1), { index: 1 });
-assert.deepEqual(toCitation('nonsense', 5), { index: 5 });
-
-// A page of 0 or a negative page is not a page.
-assert.equal(toCitation({ page: 0 }, 1).page, undefined);
-assert.equal(toCitation({ page: -2 }, 1).page, undefined);
-// …but a numeric string is.
-assert.equal(toCitation({ page: '12' }, 1).page, 12);
-
-// Empty strings are absent, not empty labels.
-assert.equal(toCitation({ document_name: '' }, 1).documentName, undefined);
+// Empty and whitespace-only strings are absent, not empty labels.
+assert.equal(toCitation({ key: 'S1', document_name: '' }, 1).documentName, undefined);
+assert.equal(toCitation({ key: 'S1', excerpt: '   ' }, 1).excerpt, undefined);
 
 // ── Scope ───────────────────────────────────────────────────────────────────
 

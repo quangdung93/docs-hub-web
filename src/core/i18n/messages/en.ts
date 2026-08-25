@@ -221,6 +221,7 @@ export const en: Record<MessageKey, string> = {
     'Click citation [1] / [2] to highlight the source passage. Try typing a question and sending it.',
   'chat.citations.title': 'Cited sources',
   'chat.citations.close': 'Close citation panel',
+  'chat.citations.source': '{scope} · relevant passages',
   'chat.citations.pages': 'Pages {pages} · relevant passages',
   'chat.citations.page': 'page {page}',
   'chat.citations.empty': 'Select a citation to view its source passage.',

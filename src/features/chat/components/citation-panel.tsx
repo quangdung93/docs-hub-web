@@ -33,6 +33,10 @@ export function CitationPanel({
 
   const documentName = citations[0]?.documentName;
   const pages = pageRangeOf(citations.map((citation) => citation.page));
+  // The backend returns null page bounds for every format seen so far, which
+  // would leave "Pages  · relevant passages" hanging. Fall back to the version
+  // the chunks came from — that is what actually locates them.
+  const scopeLabel = citations[0]?.scopeLabel;
 
   return (
     <aside className="border-border bg-surface-muted/40 hidden w-80 shrink-0 flex-col border-l lg:flex">
@@ -51,7 +55,9 @@ export function CitationPanel({
               <span className="truncate font-medium">{documentName}</span>
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
-              {t('chat.citations.pages', { pages })}
+              {pages
+                ? t('chat.citations.pages', { pages })
+                : t('chat.citations.source', { scope: scopeLabel ?? '—' })}
             </p>
 
             {citations.map((citation) => (
