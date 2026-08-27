@@ -178,8 +178,9 @@ export const documentsApi = {
    * storage links, so the browser can hit them directly and the proxy attaches
    * the bearer token — no credentials end up in a URL.
    *
-   * The base path matters: served under `mobix.asia/docshub_su5`, a bare `/api`
-   * misses the mount point entirely and 404s.
+   * The base path matters: served under a sub-path, a bare `/api` misses the
+   * mount point entirely and 404s. Production sits at the root, but the option
+   * is what makes a sub-path deployment possible at all.
    */
   downloadUrl: (projectId: string, documentId: string, revisionId: string): string =>
     `${API_BASE}${endpoints.documents.revisionDownload(projectId, documentId, revisionId)}`,

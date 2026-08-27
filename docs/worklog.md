@@ -1,5 +1,9 @@
 # Nhật ký công việc — Docs Hub Web
 
+> **Lịch sử.** Môi trường `mobix.asia/docshub_su5` đã ngừng ngày 27/08/2026;
+> production hiện là `https://docshub.io.vn`, deploy tự động qua
+> `.github/workflows/deploy.yml`. Giữ trang này để tra lại quyết định cũ.
+
 Ghi lại những gì đã làm trên nhánh `feat/docs-hub-ui` (PR #1), từ mockup HTML
 tới bản chạy được trên `mobix.asia/docshub_su5`.
 

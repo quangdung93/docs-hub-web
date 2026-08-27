@@ -45,7 +45,7 @@ const securityHeaders = [
 
 /**
  * Mount point when the app is served under a sub-path of a shared domain
- * (e.g. `https://mobix.asia/docshub_su5`). Next rewrites its own asset URLs,
+ * (e.g. `https://example.com/some-prefix`). Next rewrites its own asset URLs,
  * router links and route handlers to sit under this prefix, so nginx can proxy
  * the location straight through without stripping it. Empty = served at root.
  */
