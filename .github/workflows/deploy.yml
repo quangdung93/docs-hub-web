@@ -104,15 +104,20 @@ jobs:
 
       - name: Kiểm tra web đã phục vụ
         run: |
+          # `/` chuyển hướng sang /projects hoặc /login tuỳ có session, nên nó
+          # trả 307 chứ không phải 200. Chấp nhận mọi mã 2xx/3xx: điều cần biết
+          # là Next đã trả lời, không phải nó trả đúng mã nào.
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' -m 5 localhost:3000/ || true)
-            if [ "$code" = "200" ]; then
-              echo "✅ web trả 200 sau ${i} lần thử"
-              exit 0
-            fi
+            case "$code" in
+              2??|3??)
+                echo "✅ web trả $code sau ${i} lần thử"
+                exit 0
+                ;;
+            esac
             sleep 2
           done
-          echo "❌ web không phục vụ sau 60s — log 50 dòng cuối:"
+          echo "❌ web không phục vụ sau 60s (mã cuối: $code) — log 50 dòng cuối:"
           docker compose -f deployments/ec2/docker-compose.yml \
             --env-file /home/web/docs-hub-web/.env.ec2 logs --tail 50 web
           exit 1
