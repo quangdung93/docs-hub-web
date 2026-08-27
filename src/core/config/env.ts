@@ -19,8 +19,19 @@ const serverSchema = z.object({
   NODE_ENV: nodeEnv.default('development'),
   APP_ENV: z.enum(['local', 'development', 'staging', 'production']).default('local'),
 
-  /** Upstream backend base URL the BFF proxy forwards to (server-only egress). */
-  API_URL: z.url().default('http://localhost:4000'),
+  /**
+   * Upstream backend base URL the BFF proxy forwards to (server-only egress).
+   *
+   * Host and port only. Every path in `core/api/endpoints.ts` already carries
+   * its `/public/api/v1` or `/internal/api/v1` prefix, so a base URL that
+   * repeats one produces `/public/api/v1/public/api/v1/...` and every request
+   * 404s. That misconfiguration took down login on the first production deploy,
+   * so the prefix is stripped here rather than left to be rediscovered.
+   */
+  API_URL: z
+    .url()
+    .default('http://localhost:4000')
+    .transform((value) => value.replace(/\/(public|internal)\/api\/v\d+\/?$/, '')),
 
   /** Enable in-process MSW mocking of the upstream API. Defaults on outside prod. */
   ENABLE_MOCKS: z
