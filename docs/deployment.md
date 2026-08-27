@@ -1,6 +1,13 @@
-# Deployment — mobix.asia/docshub_su5
+# Deployment — mobix.asia/docshub_su5 (môi trường thử)
 
-Live at **https://mobix.asia/docshub_su5** on the shared VPS `103.188.83.49`,
+> Đây **không** phải production. Production là `docshub.io.vn`, deploy tự động
+> qua `.github/workflows/deploy.yml` mỗi khi có push vào `main` — xem
+> `deployments/ec2/`. Trang này mô tả môi trường phụ dùng để đối chiếu API,
+> chạy trên VPS dùng chung với landing page.
+
+Địa chỉ VPS và thông tin đăng nhập không ghi ở đây; hỏi người quản trị.
+
+Live at **https://mobix.asia/docshub_su5** on the shared VPS `<vps-host>`,
 alongside the existing `mobix-landing` site. Source lives at `/root/docs-hub-web`.
 
 ## Topology
@@ -39,10 +46,10 @@ cd /root/mobix-landing && docker compose up -d --force-recreate nginx
 # from the project root on your machine
 tar czf - --exclude node_modules --exclude .next --exclude .git \
   --exclude .env --exclude .env.local . \
-  | ssh root@103.188.83.49 'rm -rf /root/docs-hub-web && mkdir -p /root/docs-hub-web \
+  | ssh root@<vps-host> 'rm -rf /root/docs-hub-web && mkdir -p /root/docs-hub-web \
       && tar xzf - -C /root/docs-hub-web'
 
-ssh root@103.188.83.49 'cd /root/docs-hub-web && docker compose up -d --build'
+ssh root@<vps-host> 'cd /root/docs-hub-web && docker compose up -d --build'
 ```
 
 `/root/docs-hub-web/.env` holds `AUTH_SECRET` (generated on the server, chmod 600)
