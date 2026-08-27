@@ -9,7 +9,11 @@ export const ACCESS_COOKIE = 'access_token';
 export const REFRESH_COOKIE = 'refresh_token';
 
 const isProd = process.env.NODE_ENV === 'production';
-const ACCESS_MAX_AGE = 60 * 10; // 10m — matches ACCESS_TTL
+// 15m — matches the backend's access-token lifetime (`expires_in: 900`). The
+// cookie must not expire BEFORE the token it carries: a shorter window drops the
+// session while the token is still valid, forcing a sign-in the refresh flow
+// could have avoided.
+const ACCESS_MAX_AGE = 60 * 15;
 const REFRESH_MAX_AGE = 60 * 60 * 24 * 14; // 14d — matches REFRESH_TTL
 
 interface CookieOptions {

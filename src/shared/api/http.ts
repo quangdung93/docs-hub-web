@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios';
 
-import { AppError, ApiFailureSchema, ERROR_CODE } from '@/core/api/errors';
+import { ApiEnvelopeSchema } from '@/core/api/envelope';
+import { AppError, ERROR_CODE } from '@/core/api/errors';
 
 /**
  * Client-side transport. Lives in `shared/` (not `core/`) on purpose: Axios is
@@ -12,11 +13,31 @@ import { AppError, ApiFailureSchema, ERROR_CODE } from '@/core/api/errors';
  * (middleware + proxy, Module 4). A 401 that reaches the client means the session
  * is truly dead → hand off to the login page.
  */
+/**
+ * When the app is mounted under a sub-path (see `basePath` in next.config.ts),
+ * Next rewrites its route handlers to live under that prefix too — so the client
+ * must call `${basePath}/api`, not `/api`. Inlined at build time by Next.
+ */
+const apiBaseUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api`;
+
 export const http: AxiosInstance = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseUrl,
   timeout: 30_000,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
+});
+
+/**
+ * FormData must NOT carry the instance-wide JSON content type: multipart needs a
+ * `boundary=...` parameter, which only the browser can generate. Deleting the
+ * header here lets it set `multipart/form-data; boundary=…` itself. Without this
+ * every file upload reaches the server with an unparseable body.
+ */
+http.interceptors.request.use((config) => {
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+  return config;
 });
 
 http.interceptors.response.use(
@@ -43,11 +64,19 @@ export function normalizeAxiosError(error: AxiosError): AppError {
     });
   }
 
-  // Prefer the structured `success:false` envelope when the backend sent one.
-  const parsed = ApiFailureSchema.safeParse(response.data);
-  if (parsed.success) {
-    const { code, message, details } = parsed.data.error;
-    return new AppError({ code, message, status: response.status, details });
+  // Prefer the structured envelope when the backend sent one. This is the 4xx/5xx
+  // path (technical failures); business failures arrive as HTTP 200 and are
+  // handled by `unwrap`, not here.
+  const parsed = ApiEnvelopeSchema.safeParse(response.data);
+  if (parsed.success && parsed.data.error) {
+    const { code, message, details, retryable } = parsed.data.error;
+    return new AppError({
+      code,
+      message,
+      status: response.status,
+      details: (details ?? undefined) as Record<string, unknown> | undefined,
+      retryable: retryable ?? false,
+    });
   }
 
   return new AppError({

@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1
+
+# The MSW standalone API (src/mocks/standalone.ts) run as a real HTTP service.
+# This is what backs the demo deployment: the Next.js app talks to it over
+# API_URL exactly as it would talk to a real backend, so swapping in the real
+# service later is a one-variable change with no code edits.
+#
+# Runs from source via tsx (no build step) — it is a mock, not a shipped artifact.
+
+FROM node:22-alpine
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+# See Dockerfile for why this is `npm install` rather than `npm ci`.
+RUN npm install --no-audit --no-fund
+
+COPY tsconfig.json ./
+COPY src ./src
+
+ENV NODE_ENV=production
+ENV MOCK_PORT=4000
+
+EXPOSE 4000
+CMD ["npx", "tsx", "src/mocks/standalone.ts"]

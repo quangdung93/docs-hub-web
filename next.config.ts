@@ -16,7 +16,10 @@ const cspDirectives = [
   // Next injects a nonce for its own scripts in prod; dev needs eval for HMR.
   `script-src 'self' ${isDev ? "'unsafe-eval'" : ''} 'unsafe-inline'`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  // Project avatars are served from object storage as presigned links, so the
+  // storage host has to be allowed here. `connect-src` deliberately stays
+  // `'self'` — a rendered image is a far smaller surface than a fetch target.
+  "img-src 'self' data: blob: https://storage.docshub.io.vn",
   "font-src 'self'",
   "connect-src 'self'",
   "object-src 'none'",
@@ -40,9 +43,18 @@ const securityHeaders = [
   },
 ];
 
+/**
+ * Mount point when the app is served under a sub-path of a shared domain
+ * (e.g. `https://mobix.asia/docshub_su5`). Next rewrites its own asset URLs,
+ * router links and route handlers to sit under this prefix, so nginx can proxy
+ * the location straight through without stripping it. Empty = served at root.
+ */
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+
 const nextConfig: NextConfig = {
   // Produces a self-contained server bundle for small Docker images (Module 8).
   output: 'standalone',
+  ...(basePath ? { basePath, assetPrefix: basePath } : {}),
   reactStrictMode: true,
   poweredByHeader: false,
   experimental: {

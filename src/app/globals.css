@@ -34,11 +34,32 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.55 0.21 258);
 
+  /* Brand ramp — mockup #2563EB / #1D4ED8 / #1F4E79 expressed in oklch. */
+  --brand: oklch(0.55 0.21 258);
+  --brand-dark: oklch(0.49 0.21 259);
+  --brand-ink: oklch(0.38 0.09 250);
+  --brand-subtle: oklch(0.96 0.02 255);
+
+  /* Surfaces — the mockup sits on slate-100 with white cards. */
+  --canvas: oklch(0.968 0.003 255);
+  --surface: oklch(1 0 0);
+  --surface-muted: oklch(0.984 0.002 255);
+
   /* Domain semantic tokens — document status. */
   --status-draft: oklch(0.556 0 0);
   --status-in-review: oklch(0.75 0.15 85);
   --status-approved: oklch(0.6 0.16 150);
   --status-archived: oklch(0.5 0.02 260);
+
+  /* Pipeline states shared by document rows, upload queue and status pills. */
+  --status-indexed: oklch(0.6 0.16 150);
+  --status-indexed-bg: oklch(0.96 0.03 155);
+  --status-processing: oklch(0.55 0.21 258);
+  --status-processing-bg: oklch(0.96 0.02 255);
+  --status-queued: oklch(0.65 0.15 75);
+  --status-queued-bg: oklch(0.97 0.04 90);
+  --status-failed: oklch(0.577 0.245 27.325);
+  --status-failed-bg: oklch(0.96 0.02 20);
 
   /* Chart palette (Recharts, Module 7). */
   --chart-1: oklch(0.55 0.21 258);
@@ -69,10 +90,28 @@
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.68 0.17 258);
 
+  --brand: oklch(0.68 0.17 258);
+  --brand-dark: oklch(0.62 0.19 258);
+  --brand-ink: oklch(0.45 0.11 250);
+  --brand-subtle: oklch(0.3 0.05 258);
+
+  --canvas: oklch(0.13 0 0);
+  --surface: oklch(0.205 0 0);
+  --surface-muted: oklch(0.24 0 0);
+
   --status-draft: oklch(0.708 0 0);
   --status-in-review: oklch(0.82 0.14 85);
   --status-approved: oklch(0.72 0.15 150);
   --status-archived: oklch(0.6 0.02 260);
+
+  --status-indexed: oklch(0.72 0.15 150);
+  --status-indexed-bg: oklch(0.3 0.05 155);
+  --status-processing: oklch(0.68 0.17 258);
+  --status-processing-bg: oklch(0.3 0.05 258);
+  --status-queued: oklch(0.82 0.14 85);
+  --status-queued-bg: oklch(0.32 0.05 85);
+  --status-failed: oklch(0.704 0.191 22.216);
+  --status-failed-bg: oklch(0.3 0.06 20);
 
   --chart-1: oklch(0.68 0.17 258);
   --chart-2: oklch(0.72 0.15 150);
@@ -107,10 +146,28 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-subtle: var(--brand-subtle);
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+
   --color-status-draft: var(--status-draft);
   --color-status-in-review: var(--status-in-review);
   --color-status-approved: var(--status-approved);
   --color-status-archived: var(--status-archived);
+
+  --color-status-indexed: var(--status-indexed);
+  --color-status-indexed-bg: var(--status-indexed-bg);
+  --color-status-processing: var(--status-processing);
+  --color-status-processing-bg: var(--status-processing-bg);
+  --color-status-queued: var(--status-queued);
+  --color-status-queued-bg: var(--status-queued-bg);
+  --color-status-failed: var(--status-failed);
+  --color-status-failed-bg: var(--status-failed-bg);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -131,9 +188,51 @@
   }
 
   body {
-    background-color: var(--color-background);
+    background-color: var(--color-canvas);
+    /* Soft brand-tinted gradient wash — subtle depth behind the UI, never
+       competing with it. Fixed so it stays put while content scrolls. */
+    background-image:
+      radial-gradient(
+        60rem 60rem at 15% -10%,
+        color-mix(in oklab, var(--color-brand) 12%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        50rem 50rem at 100% 110%,
+        color-mix(in oklab, var(--color-brand) 9%, transparent),
+        transparent 55%
+      );
+    background-attachment: fixed;
     color: var(--color-foreground);
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
+  }
+}
+
+@layer utilities {
+  /* Slim scrollbar for chat/source panes — mockup's `.scroll-thin`. */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  /* Indeterminate progress sweep for the "creating embeddings" queue item. */
+  .indeterminate-bar::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    width: 40%;
+    border-radius: 9999px;
+    background-color: var(--color-brand);
+    animation: indeterminate-sweep 1.1s ease-in-out infinite;
+  }
+
+  @keyframes indeterminate-sweep {
+    from {
+      inset-inline-start: -40%;
+    }
+    to {
+      inset-inline-start: 100%;
+    }
   }
 }

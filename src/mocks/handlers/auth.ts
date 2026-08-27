@@ -48,27 +48,34 @@ const claimsFor = (u: SeedUser): SessionClaims => ({
 });
 
 export const authHandlers = [
-  http.post('*/auth/login', async ({ request }) => {
-    const { email, password } = (await request.json().catch(() => ({}))) as {
-      email?: string;
+  http.post('*/public/api/v1/auth/login', async ({ request }) => {
+    const { username, password } = (await request.json().catch(() => ({}))) as {
+      username?: string;
       password?: string;
     };
-    const user = USERS.find((u) => u.email === email && u.password === password);
+    const user = USERS.find((u) => u.email === username && u.password === password);
     if (!user) {
-      return HttpResponse.json(failure('ERR_INVALID_CREDENTIALS', 'Invalid email or password'), {
+      return HttpResponse.json(failure('AUTH_401', 'Sai tên đăng nhập hoặc mật khẩu'), {
         status: 401,
       });
     }
+    // `roles` is a raw JSON string on the wire, matching the documented backend
+    // behaviour the DTO layer parses back into an array.
     return HttpResponse.json(
       envelope({
-        user: publicUser(user),
-        accessToken: await signAccessToken(claimsFor(user)),
-        refreshToken: await signRefreshToken(user.id),
+        user: {
+          id: user.id,
+          username: user.email,
+          full_name: user.name,
+          roles: JSON.stringify([...user.roles]),
+          created_at: new Date().toISOString(),
+        },
+        token: await signAccessToken(claimsFor(user)),
       })
     );
   }),
 
-  http.post('*/auth/refresh', async ({ request }) => {
+  http.post('*/internal/api/v1/auth/refresh', async ({ request }) => {
     const { refreshToken } = (await request.json().catch(() => ({}))) as { refreshToken?: string };
     const sub = refreshToken ? await verifyRefreshToken(refreshToken) : null;
     const user = sub ? USERS.find((u) => u.id === sub) : undefined;
@@ -87,9 +94,9 @@ export const authHandlers = [
     );
   }),
 
-  http.post('*/auth/logout', () => HttpResponse.json(envelope({ ok: true }))),
+  http.post('*/internal/api/v1/auth/logout', () => HttpResponse.json(envelope({ ok: true }))),
 
-  http.get('*/auth/me', async ({ request }) => {
+  http.get('*/internal/api/v1/auth/me', async ({ request }) => {
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
     const claims = token ? await verifyAccessToken(token) : null;
     const user = claims ? USERS.find((u) => u.id === claims.sub) : undefined;

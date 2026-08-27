@@ -17,7 +17,21 @@ const ACCESS_COOKIE = 'access_token';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Hop-by-hop / sensitive headers we must not forward upstream.
-const STRIPPED_REQUEST_HEADERS = new Set(['host', 'cookie', 'connection', 'content-length']);
+const STRIPPED_REQUEST_HEADERS = new Set([
+  'host',
+  'cookie',
+  'connection',
+  'content-length',
+  /**
+   * `origin` and `referer` describe the *browser's* page, not this server-to-
+   * server hop, so they are meaningless upstream — and docs-hub-api answers a
+   * bare 403 (empty body, no envelope) to any request carrying an `Origin`,
+   * including GETs. Verified 24/08/2026: identical requests differing only by
+   * this header return 201 without it and 403 with it.
+   */
+  'origin',
+  'referer',
+]);
 
 function isSameOrigin(req: NextRequest): boolean {
   const site = req.headers.get('sec-fetch-site');

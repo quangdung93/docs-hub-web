@@ -1,4 +1,4 @@
-import { jwtVerify, SignJWT } from 'jose';
+import { decodeJwt, jwtVerify, SignJWT } from 'jose';
 
 import { type SessionClaims, SessionClaimsSchema } from './tokens';
 
@@ -43,10 +43,28 @@ export async function signRefreshToken(sub: string): Promise<string> {
     .sign(key());
 }
 
-/** Verify an access token and return validated claims, or null if invalid/expired. */
+/**
+ * Read the claims out of the access token, or null if it is malformed/expired.
+ *
+ * This DECODES rather than verifies the signature, deliberately. The token is
+ * minted and signed by docs-hub-api with a secret this app does not hold (and
+ * should not — it is the backend's). Verifying it here with `AUTH_SECRET` would
+ * fail every real token.
+ *
+ * That is safe because this value is not a trust boundary: the token arrives from
+ * our own httpOnly cookie (JS cannot write it) and is only used to render the
+ * current user and gate navigation. Every actual authorization decision is made
+ * by the backend, which validates the signature on each request. `exp` is still
+ * enforced so an expired session logs out instead of showing a stale identity.
+ *
+ * If the backend later exposes a JWKS endpoint, swap the body for `jwtVerify`
+ * against that key set.
+ */
 export async function verifyAccessToken(token: string): Promise<SessionClaims | null> {
   try {
-    const { payload } = await jwtVerify(token, key(), { issuer: ISSUER, audience: AUDIENCE });
+    const payload = decodeJwt(token);
+    if (payload.iss && payload.iss !== ISSUER) return null;
+    if (payload.exp && payload.exp <= Math.floor(Date.now() / 1000)) return null;
     return SessionClaimsSchema.parse(payload);
   } catch {
     return null;
@@ -63,10 +81,13 @@ export async function verifyRefreshToken(token: string): Promise<string | null> 
   }
 }
 
-/** True if the access token expires within `withinSeconds` (or is already invalid). */
+/**
+ * True if the access token expires within `withinSeconds` (or is already invalid).
+ * Decodes rather than verifies, for the same reason as `verifyAccessToken`.
+ */
 export async function isAccessExpiring(token: string, withinSeconds = 60): Promise<boolean> {
   try {
-    const { payload } = await jwtVerify(token, key(), { issuer: ISSUER, audience: AUDIENCE });
+    const payload = decodeJwt(token);
     if (!payload.exp) return true;
     return payload.exp - Math.floor(Date.now() / 1000) <= withinSeconds;
   } catch {

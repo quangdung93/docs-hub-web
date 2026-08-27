@@ -1,4 +1,4 @@
-# Giữ build context nhỏ — node_modules được cài lại trong image.
+# Giữ build context nhỏ, và chặn secret/artifact local lọt vào image.
 node_modules
 .next
 .git
@@ -7,9 +7,17 @@ node_modules
 coverage
 playwright-report
 test-results
+npm-debug.log*
 *.log
+
+# File env local — giá trị thật được nạp lúc chạy qua compose, không bake vào image.
+.env
+.env.local
+.env.*.local
+
 .DS_Store
-.env*.local
 .vscode
 .idea
 docs
+README.md
+CLAUDE.md
