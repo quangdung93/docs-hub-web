@@ -53,6 +53,14 @@ export function useChat(projectId: string) {
   const key = queryKeys.chat.conversation(projectId, conversationId ?? 'none');
 
   const ask = useMutation({
+    /**
+     * Returns the conversation id alongside the answer. `onSuccess` needs it, and
+     * reading it from `conversationId` there is wrong: on the first question that
+     * state is still null in the callback's closure — `setConversationId` below
+     * only schedules a re-render, it does not update the variable the running
+     * callbacks captured. Returning it as data is the only value that cannot be
+     * stale.
+     */
     mutationFn: async (question: string) => {
       let id = conversationId;
 
@@ -68,13 +76,17 @@ export function useChat(projectId: string) {
         });
       }
 
-      return chatApi.ask(projectId, id, question);
+      const answer = await chatApi.ask(projectId, id, question);
+      return { conversationId: id, answer };
     },
 
     // The question bubble appears instantly; the answer is appended on arrival.
     onMutate: async (question) => {
-      await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<Conversation>(key);
+      // Captured here so `onError` rolls back the key this write targeted, even
+      // if `conversationId` changed in between.
+      const activeKey = key;
+      await queryClient.cancelQueries({ queryKey: activeKey });
+      const previous = queryClient.getQueryData<Conversation>(activeKey);
 
       const optimistic: ChatMessage = {
         id: `optimistic-${Date.now()}`,
@@ -84,36 +96,35 @@ export function useChat(projectId: string) {
         createdAt: new Date().toISOString(),
       };
 
+      // Only an existing conversation has something to append to. For the first
+      // question the cache is legitimately empty; `onSuccess` inserts the pair.
       if (previous) {
-        queryClient.setQueryData<Conversation>(key, {
+        queryClient.setQueryData<Conversation>(activeKey, {
           ...previous,
           messages: [...previous.messages, optimistic],
         });
       }
 
-      return { previous, optimistic };
+      return { previous, optimistic, key: activeKey };
     },
 
-    onSuccess: (answer, _question, context) => {
-      const id = conversationId;
-      if (!id) return;
-
+    onSuccess: ({ conversationId: id, answer }, _question, context) => {
       const currentKey = queryKeys.chat.conversation(projectId, id);
       queryClient.setQueryData<Conversation>(currentKey, (current) => {
         if (!current) return current;
         // A conversation created inside this same mutation has no optimistic
-        // bubble yet (the key changed after `onMutate` ran) — append both rows.
-        const hasOptimistic =
-          context?.optimistic && current.messages.some((m) => m.id === context.optimistic.id);
-        const base = hasOptimistic
-          ? current.messages
-          : [...current.messages, ...(context?.optimistic ? [context.optimistic] : [])];
+        // bubble yet — `onMutate` ran against the "none" key, before the id
+        // existed — so both rows are appended here.
+        const hasOptimistic = current.messages.some((m) => m.id === context.optimistic.id);
+        const base = hasOptimistic ? current.messages : [...current.messages, context.optimistic];
         return { ...current, messages: [...base, answer] };
       });
     },
 
     onError: (_error, _question, context) => {
-      if (context?.previous) queryClient.setQueryData(key, context.previous);
+      // Rolls back against the key `onMutate` wrote to. A first question has no
+      // previous state to restore — nothing was written, so nothing to undo.
+      if (context?.previous) queryClient.setQueryData(context.key, context.previous);
     },
   });
 

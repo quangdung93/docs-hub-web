@@ -6,7 +6,7 @@
  */
 import assert from 'node:assert/strict';
 
-import { pageRangeOf, parseAnswer } from './citation.service';
+import { looksLikeCode, pageRangeOf, parseAnswer } from './citation.service';
 
 // Markers become citation segments, surrounding text is preserved verbatim.
 assert.deepEqual(parseAnswer('OTP is required[1].', [1]), [
@@ -34,5 +34,26 @@ assert.deepEqual(parseAnswer('[1] starts here', [1]), [
 assert.equal(pageRangeOf([5, 4, 4]), '4–5');
 assert.equal(pageRangeOf([3]), '3');
 assert.equal(pageRangeOf([]), '');
+
+// ── looksLikeCode ───────────────────────────────────────────────────────────
+
+// The real case that prompted this: an AndroidManifest chunk, unreadable when
+// its indentation collapses into a proportional font.
+assert.equal(
+  looksLikeCode('<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />'),
+  true
+);
+assert.equal(looksLikeCode('  {\n    "chunk_size": 800\n  }'), true);
+assert.equal(looksLikeCode('export function toDocument(dto) {'), true);
+assert.equal(looksLikeCode('```\nmã nguồn\n```'), true);
+assert.equal(looksLikeCode('API_URL = "http://api:8080"'), true);
+
+// Prose stays prose — including Vietnamese, and including sentences that happen
+// to contain punctuation the markers care about.
+assert.equal(looksLikeCode('Quy trình kiểm thử DOCX gồm ba bước.'), false);
+assert.equal(looksLikeCode('Bước 1: Kiểm tra định dạng tệp đầu vào.'), false);
+assert.equal(looksLikeCode('Chi phí < 100 và > 50 nghìn đồng.'), false);
+assert.equal(looksLikeCode(''), false);
+assert.equal(looksLikeCode(undefined), false);
 
 console.log('citation.service: all assertions passed');

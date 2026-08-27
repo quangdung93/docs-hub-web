@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Folder, FolderCog, Loader2, MessagesSquare } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
@@ -24,6 +25,7 @@ import { ConversationList } from './conversation-list';
  */
 export function ChatScreen({ projectId }: { projectId: string }) {
   const { t } = useI18n();
+  const router = useRouter();
   const { data: project } = useProject(projectId);
   const {
     conversationId,
@@ -80,7 +82,10 @@ export function ChatScreen({ projectId }: { projectId: string }) {
                 <IconButton
                   icon={ArrowLeft}
                   label={t('common.back')}
-                  onClick={() => history.back()}
+                  // Explicit destination, not `history.back()`: where the user
+                  // came from is not this screen's business, and popping history
+                  // after the create-project wizard walked them back into it.
+                  onClick={() => router.push(projectRoutes.list)}
                 />
                 <div className="min-w-0 leading-tight">
                   <div className="truncate text-sm font-semibold tracking-tight">

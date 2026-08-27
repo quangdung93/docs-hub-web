@@ -45,3 +45,30 @@ export function pageRangeOf(pages: readonly (number | undefined)[]): string {
   const last = sorted[sorted.length - 1];
   return first === last ? `${first}` : `${first}–${last}`;
 }
+
+/**
+ * Does this excerpt read as code rather than prose?
+ *
+ * Excerpts are raw document text, and a chunk lifted out of an AndroidManifest or
+ * a config file is unreadable in a proportional font — the indentation that gives
+ * it structure collapses visually. Prose is the common case, so the test is
+ * deliberately conservative: it only fires on markers that essentially never
+ * appear in a sentence.
+ *
+ * ponytail: heuristic, not a parser. The cost of a wrong answer is a font choice,
+ * so a language detector would be gold-plating.
+ */
+export function looksLikeCode(excerpt: string | undefined): boolean {
+  if (!excerpt) return false;
+
+  const markers = [
+    /<\/?[a-z][\w.-]*[\s>/]/i, // an XML/HTML tag
+    /\/>/, // a self-closing tag
+    /^\s*[{}[\]]/m, // a line opening or closing a block
+    /^\s*(?:function|const|let|var|class|import|export|def|public|private)\s/m,
+    /^\s*```/m, // a fenced block
+    /^\s*[\w.-]+\s*[:=]\s*["'{[]/m, // key = "value" / key: {
+  ];
+
+  return markers.some((marker) => marker.test(excerpt));
+}

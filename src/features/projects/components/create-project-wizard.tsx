@@ -68,7 +68,13 @@ export function CreateProjectWizard() {
     });
   });
 
-  const finish = () => router.push(projectRoutes.chat(createdProjectId ?? ''));
+  /**
+   * `replace`, not `push`: the wizard has done its job and should not sit in
+   * history. With `push`, Back from the project landed here again — on a fresh
+   * wizard whose `createdProjectId` is null, so Continue would create a second
+   * project.
+   */
+  const finish = () => router.replace(projectRoutes.chat(createdProjectId ?? ''));
 
   return (
     <>

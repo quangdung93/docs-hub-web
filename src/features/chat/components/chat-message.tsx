@@ -26,7 +26,9 @@ export function ChatMessage({
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="bg-brand max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm break-words text-white">
+        {/* `whitespace-pre-line`: the composer accepts Shift+Enter, so a question
+            can be several lines — without this they collapse into one. */}
+        <div className="bg-brand max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm break-words whitespace-pre-line text-white">
           {message.content}
         </div>
       </div>

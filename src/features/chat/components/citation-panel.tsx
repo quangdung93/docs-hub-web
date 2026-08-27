@@ -9,7 +9,7 @@ import { IconButton } from '@/shared/ui';
 
 import type { Citation } from '../schemas/chat.schema';
 import { useResizablePanel } from '../hooks/use-resizable-panel';
-import { pageRangeOf } from '../services/citation.service';
+import { looksLikeCode, pageRangeOf } from '../services/citation.service';
 
 /**
  * Source sidebar. The active citation is highlighted and scrolled into view —
@@ -116,7 +116,18 @@ export function CitationPanel({
                     ? null
                     : ` · ${t('chat.citations.page', { page: citation.page })}`}
                 </div>
-                {citation.excerpt}
+                {/* `whitespace-pre-wrap` keeps the document's own line breaks and
+                    indentation. Without it every newline collapses and the whole
+                    excerpt renders as one unreadable paragraph. */}
+                <div
+                  className={cn(
+                    'whitespace-pre-wrap',
+                    looksLikeCode(citation.excerpt) &&
+                      'bg-surface-muted/60 overflow-x-auto rounded px-2 py-1.5 font-mono text-xs'
+                  )}
+                >
+                  {citation.excerpt}
+                </div>
               </div>
             ))}
           </>
