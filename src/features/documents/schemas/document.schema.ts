@@ -6,6 +6,22 @@ import { z } from 'zod';
  */
 export const DocumentStatusSchema = z.enum(['indexed', 'processing', 'queued', 'failed']);
 
+/**
+ * One entry in a document's change history — a single upload of that document.
+ * `revisionNo` is what the user thinks of as the document's version (v1 → v2),
+ * distinct from the *project* version the upload was scoped to.
+ */
+export const RevisionEntrySchema = z.object({
+  id: z.string(),
+  revisionNo: z.number().int(),
+  fileName: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  status: z.enum(['indexed', 'processing', 'queued', 'failed']),
+  projectVersionId: z.string().nullable(),
+  uploadedBy: z.string().nullable(),
+  uploadedAt: z.iso.datetime(),
+});
+
 export const DocumentSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -34,11 +50,26 @@ export const DocumentSchema = z.object({
   fileName: z.string().nullable(),
   /** Optimistic-locking counter; PATCH must echo the value it last read. */
   version: z.number().int(),
+  /**
+   * Project version the newest revision was uploaded into, from
+   * `revision.scope.project_version_id`. Null when the revision carries no scope
+   * (older rows) or the list response omitted revisions entirely — the table
+   * shows a dash rather than guessing the current version.
+   */
+  projectVersionId: z.string().nullable(),
+  /**
+   * Every revision, newest first. This is the document's change history: the
+   * backend has no history endpoint, but `GET /documents/{id}` already returns
+   * the full revision list, so the history tab is built from data the table has
+   * already fetched rather than from a second round trip.
+   */
+  history: z.array(RevisionEntrySchema),
 });
 
 export const DocumentListSchema = z.array(DocumentSchema);
 
 export type Document = z.infer<typeof DocumentSchema>;
+export type RevisionEntry = z.infer<typeof RevisionEntrySchema>;
 export type DocumentStatus = z.infer<typeof DocumentStatusSchema>;
 
 /**

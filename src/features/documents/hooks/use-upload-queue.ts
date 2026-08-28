@@ -130,8 +130,8 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
    * until one exists, and nothing else in the UI creates one.
    */
   const addVersion = useCallback(
-    async (label: string) => {
-      const created = await createVersion.mutateAsync(label);
+    async (label: string, note?: string) => {
+      const created = await createVersion.mutateAsync({ label, note });
       setSelectedVersionId(created.id);
       return created;
     },

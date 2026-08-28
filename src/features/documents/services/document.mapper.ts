@@ -1,4 +1,4 @@
-import { type Document, type DocumentStatus } from '../schemas/document.schema';
+import { type Document, type DocumentStatus, type RevisionEntry } from '../schemas/document.schema';
 import type { DocumentDto, RevisionDto } from '../api/document.dto';
 
 /**
@@ -61,6 +61,30 @@ export function newestRevision(revisions: readonly RevisionDto[] | null | undefi
   );
 }
 
+/**
+ * Revisions → change history, newest first.
+ *
+ * Sorted here rather than trusted from the wire: the backend returns them in
+ * insertion order, which happens to be ascending today but is not part of the
+ * contract, and a history list that silently flips order is worse than one that
+ * costs an O(n log n) sort on a handful of rows.
+ */
+export function toHistory(revisions?: readonly RevisionDto[] | null): RevisionEntry[] {
+  if (!revisions?.length) return [];
+  return [...revisions]
+    .sort((a, b) => b.revision_no - a.revision_no)
+    .map((revision) => ({
+      id: revision.id,
+      revisionNo: revision.revision_no,
+      fileName: revision.file_name,
+      sizeBytes: revision.size_bytes,
+      status: toDocumentStatus(revision),
+      projectVersionId: revision.scope?.project_version_id ?? null,
+      uploadedBy: revision.created_by ?? null,
+      uploadedAt: revision.created_at,
+    }));
+}
+
 export function toDocument(dto: DocumentDto, revisions?: readonly RevisionDto[] | null): Document {
   const revision = newestRevision(revisions);
 
@@ -81,5 +105,7 @@ export function toDocument(dto: DocumentDto, revisions?: readonly RevisionDto[] 
     revisionNo: revision?.revision_no ?? null,
     errorMessage: revision?.error_detail ?? revision?.ragflow_last_error ?? null,
     version: dto.version,
+    projectVersionId: revision?.scope?.project_version_id ?? null,
+    history: toHistory(revisions),
   };
 }

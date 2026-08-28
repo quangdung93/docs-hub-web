@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/core/api';
@@ -82,10 +83,33 @@ export function useProjectVersions(projectId: string) {
   return useQuery(projectVersionsQueryOptions(projectId));
 }
 
+/**
+ * Version id → label, for rendering "which version is this document in".
+ *
+ * A document row carries only the id; every screen that shows a version would
+ * otherwise rebuild this map itself. Returns a plain lookup function so a caller
+ * inside a render loop does not pay for a `find` per row.
+ */
+export function useVersionLabels(projectId: string) {
+  const { data: versions } = useProjectVersions(projectId);
+
+  return useMemo(() => {
+    const byId = new Map((versions ?? []).map((version) => [version.id, version.label]));
+    return {
+      versions: versions ?? [],
+      // Falls back to a short id rather than an empty cell: an unlabelled
+      // version still tells the reader the document is scoped to *something*.
+      labelOf: (versionId: string | null): string | null =>
+        versionId ? (byId.get(versionId) ?? versionId.slice(0, 8)) : null,
+    };
+  }, [versions]);
+}
+
 export function useCreateProjectVersion(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (label: string) => versionsApi.create(projectId, label),
+    mutationFn: (input: { label: string; note?: string }) =>
+      versionsApi.create(projectId, input.label, input.note),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.versions.all });
     },

@@ -199,8 +199,20 @@ export const versionsApi = {
     return apiSuccessSchema(ProjectVersionListDtoSchema).parse(data).data;
   },
 
-  create: async (projectId: string, label: string): Promise<ProjectVersionDto> => {
-    const { data } = await http.post(endpoints.versions.create(projectId), { label });
+  /**
+   * Create a draft version.
+   *
+   * `note` is sent but the backend currently drops it — the response echoes back
+   * only `label`, verified 28/08/2026. It is sent anyway because the field costs
+   * nothing, the UI already collects it, and the day the backend persists it
+   * this starts working with no client change. Do not surface a saved note until
+   * the response actually carries one.
+   */
+  create: async (projectId: string, label: string, note?: string): Promise<ProjectVersionDto> => {
+    const { data } = await http.post(endpoints.versions.create(projectId), {
+      label,
+      ...(note?.trim() ? { note: note.trim() } : {}),
+    });
     return apiSuccessSchema(ProjectVersionDtoSchema).parse(data).data;
   },
 };

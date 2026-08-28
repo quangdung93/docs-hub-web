@@ -201,6 +201,21 @@ export const documentHandlers = [
       revisionNo: 1,
       errorMessage: null,
       version: 1,
+      // Uploads carry the scope the client sent, so the version column and the
+      // version filter reflect a real choice rather than a hardcoded default.
+      projectVersionId: String(form.get('project_version_id') ?? '') || null,
+      history: [
+        {
+          id: `r-${id}`,
+          revisionNo: 1,
+          fileName: name,
+          sizeBytes: file instanceof File ? file.size : 0,
+          status: 'processing' as const,
+          projectVersionId: String(form.get('project_version_id') ?? '') || null,
+          uploadedBy: 'u-admin',
+          uploadedAt: new Date().toISOString(),
+        },
+      ],
     };
 
     db.documents[projectId] = [document, ...documentsOf(projectId)];

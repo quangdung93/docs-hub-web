@@ -139,6 +139,19 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    projectVersionId: 'v-mock-draft',
+    history: [
+      {
+        id: 'r1',
+        revisionNo: 1,
+        fileName: 'Quy_trinh_KYC_v3.pdf',
+        sizeBytes: 2_517_000,
+        status: 'indexed',
+        projectVersionId: 'v-mock-draft',
+        uploadedBy: 'u-admin',
+        uploadedAt: ago(2 * HOUR),
+      },
+    ],
   },
   {
     id: 'd2',
@@ -153,6 +166,19 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    projectVersionId: 'v-mock-published',
+    history: [
+      {
+        id: 'r2',
+        revisionNo: 1,
+        fileName: 'BRD_Core_Banking.docx',
+        sizeBytes: 1_887_000,
+        status: 'indexed',
+        projectVersionId: 'v-mock-published',
+        uploadedBy: 'u-admin',
+        uploadedAt: ago(DAY),
+      },
+    ],
   },
   {
     id: 'd3',
@@ -167,6 +193,19 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    projectVersionId: 'v-mock-draft',
+    history: [
+      {
+        id: 'r3',
+        revisionNo: 1,
+        fileName: 'Bien_ban_hop_0708.docx',
+        sizeBytes: 389_000,
+        status: 'processing',
+        projectVersionId: 'v-mock-draft',
+        uploadedBy: 'u-admin',
+        uploadedAt: ago(5 * MINUTE),
+      },
+    ],
   },
   {
     id: 'd4',
@@ -181,6 +220,19 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    projectVersionId: 'v-mock-published',
+    history: [
+      {
+        id: 'r4',
+        revisionNo: 1,
+        fileName: 'Checklist_tuan_thu.pdf',
+        sizeBytes: 757_000,
+        status: 'indexed',
+        projectVersionId: 'v-mock-published',
+        uploadedBy: 'u-admin',
+        uploadedAt: ago(3 * DAY),
+      },
+    ],
   },
   {
     id: 'd5',
@@ -195,6 +247,19 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    projectVersionId: 'v-mock-draft',
+    history: [
+      {
+        id: 'r5',
+        revisionNo: 1,
+        fileName: 'Phu_luc_hop_dong.pdf',
+        sizeBytes: 1_153_000,
+        status: 'queued',
+        projectVersionId: 'v-mock-draft',
+        uploadedBy: 'u-admin',
+        uploadedAt: ago(MINUTE),
+      },
+    ],
   },
   {
     id: 'd6',
@@ -209,6 +274,19 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    projectVersionId: 'v-mock-published',
+    history: [
+      {
+        id: 'r6',
+        revisionNo: 1,
+        fileName: 'Dac_ta_API_v2.md',
+        sizeBytes: 98_300,
+        status: 'indexed',
+        projectVersionId: 'v-mock-published',
+        uploadedBy: 'u-admin',
+        uploadedAt: ago(7 * DAY),
+      },
+    ],
   },
   {
     id: 'd7',
@@ -223,6 +301,19 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    projectVersionId: 'v-mock-draft',
+    history: [
+      {
+        id: 'r7',
+        revisionNo: 1,
+        fileName: 'Bang_thuat_ngu.xlsx',
+        sizeBytes: 122_880,
+        status: 'indexed',
+        projectVersionId: 'v-mock-draft',
+        uploadedBy: 'u-admin',
+        uploadedAt: ago(14 * DAY),
+      },
+    ],
   },
 ];
 

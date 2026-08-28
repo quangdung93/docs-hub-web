@@ -17,9 +17,12 @@ import { VersionPicker } from './version-picker';
 export function UploadPanel({
   projectId,
   layout = 'split',
+  initialVersion = false,
 }: {
   projectId: string;
   layout?: 'split' | 'stacked';
+  /** Set by the create-project wizard: the version named here is the first one. */
+  initialVersion?: boolean;
 }) {
   const { t } = useI18n();
   const {
@@ -44,6 +47,7 @@ export function UploadPanel({
       onChange={selectVersion}
       onCreate={addVersion}
       isCreating={isAddingVersion}
+      initial={initialVersion}
     />
   );
 

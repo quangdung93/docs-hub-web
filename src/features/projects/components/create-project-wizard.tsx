@@ -167,7 +167,7 @@ export function CreateProjectWizard() {
           </form>
         ) : (
           <CardBody>
-            <UploadPanel projectId={createdProjectId!} layout="stacked" />
+            <UploadPanel projectId={createdProjectId!} layout="stacked" initialVersion />
 
             <p className="text-muted-foreground mt-3 text-center text-xs">
               {t('createProject.skipHint')}

@@ -22,12 +22,19 @@ export function VersionPicker({
   onChange,
   onCreate,
   isCreating,
+  initial = false,
 }: {
   versions: ProjectVersionDto[];
   value: string | undefined;
   onChange: (versionId: string) => void;
-  onCreate: (label: string) => Promise<unknown>;
+  onCreate: (label: string, note?: string) => Promise<unknown>;
   isCreating: boolean;
+  /**
+   * Wizard framing: this is the project's *first* version, being named as part
+   * of creating it, so the empty state reads as a step rather than as a warning
+   * that something is missing.
+   */
+  initial?: boolean;
 }) {
   const { t } = useI18n();
   const [creating, setCreating] = useState(false);
@@ -55,7 +62,11 @@ export function VersionPicker({
     return (
       <div className="border-border bg-surface-muted/40 space-y-2 rounded-lg border p-3">
         <label className="text-muted-foreground block text-xs font-medium" htmlFor="version-label">
-          {empty ? t('versions.emptyPrompt') : t('versions.newLabel')}
+          {empty
+            ? initial
+              ? t('versions.initialPrompt')
+              : t('versions.emptyPrompt')
+            : t('versions.newLabel')}
         </label>
         <div className="flex gap-2">
           <Input
@@ -78,6 +89,9 @@ export function VersionPicker({
             </Button>
           )}
         </div>
+        {initial && empty && (
+          <p className="text-muted-foreground text-xs">{t('versions.initialHint')}</p>
+        )}
         {error && <p className="text-status-failed text-xs">{error}</p>}
       </div>
     );
