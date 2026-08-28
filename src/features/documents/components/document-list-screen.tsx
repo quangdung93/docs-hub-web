@@ -1,12 +1,13 @@
 'use client';
 
-import { ArrowLeft, CircleDot, Filter, Folder, Plus } from 'lucide-react';
+import { ArrowLeft, CircleDot, Filter, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { type MessageKey, useI18n } from '@/core/i18n';
 import { orUnknown } from '@/shared/lib/format';
-import { useProject } from '@/features/projects';
+import { ProjectAvatar, useProject } from '@/features/projects';
 import { projectRoutes } from '@/features/projects/routes';
 import { Button, IconButton, SearchInput, Select } from '@/shared/ui';
 
@@ -27,6 +28,7 @@ const STATUS_VALUES = ['indexed', 'processing', 'queued', 'failed'] as const;
  */
 export function DocumentListScreen({ projectId }: { projectId: string }) {
   const { t } = useI18n();
+  const router = useRouter();
   const { data: project } = useProject(projectId);
   const [search, setSearch] = useState('');
   const [formatFilter, setFormatFilter] = useState<DocumentFormat | 'all'>('all');
@@ -53,12 +55,12 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
             icon={ArrowLeft}
             label={t('common.back')}
             className="border-border size-9 border"
-            onClick={() => history.back()}
+            onClick={() => router.push(projectRoutes.list)}
           />
           <div>
             <h1 className="text-lg font-semibold tracking-tight">{t('documents.title')}</h1>
             <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-sm">
-              <Folder className="size-3.5" aria-hidden />
+              <ProjectAvatar imageUrl={project?.imageUrl} size="sm" />
               {project?.name}
               {project && ` · ${t('documents.count', { count: orUnknown(project.documentCount) })}`}
             </p>

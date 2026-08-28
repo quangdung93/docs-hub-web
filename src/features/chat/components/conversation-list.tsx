@@ -6,7 +6,7 @@ import { MessageSquarePlus, MessagesSquare, Trash2 } from 'lucide-react';
 import { useI18n } from '@/core/i18n';
 import { formatRelativeTime } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
-import { ConfirmDialog, Skeleton } from '@/shared/ui';
+import { ConfirmDialog, ErrorState, Skeleton } from '@/shared/ui';
 
 import { useConversations } from '../hooks/use-chat';
 
@@ -30,7 +30,7 @@ export function ConversationList({
   onSelect: (conversationId: string | null) => void;
 }) {
   const { t, locale } = useI18n();
-  const { data: conversations, isPending } = useConversations(projectId);
+  const { data: conversations, isPending, isError, error, refetch } = useConversations(projectId);
 
   /** Right-click target: viewport coordinates plus the row it belongs to. */
   const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(null);
@@ -80,6 +80,15 @@ export function ConversationList({
             <Skeleton className="h-8" />
             <Skeleton className="h-8" />
           </div>
+        ) : isError ? (
+          <ErrorState
+            error={error}
+            title={t('conversations.loadError')}
+            fallbackMessage={t('error.loadFailed')}
+            retryLabel={t('common.retry')}
+            onRetry={() => void refetch()}
+            className="px-2 py-6"
+          />
         ) : !conversations?.length ? (
           <p className="text-muted-foreground px-2.5 py-6 text-center text-xs">
             {t('chat.conversations.empty')}

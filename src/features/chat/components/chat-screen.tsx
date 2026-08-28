@@ -1,13 +1,13 @@
 'use client';
 
-import { ArrowLeft, Folder, FolderCog, Loader2, MessagesSquare } from 'lucide-react';
+import { ArrowLeft, FolderCog, Loader2, MessagesSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
 import { orUnknown } from '@/shared/lib/format';
-import { useProject } from '@/features/projects';
+import { ProjectAvatar, useProject } from '@/features/projects';
 import { projectRoutes } from '@/features/projects/routes';
 import { Button, Card, EmptyState, IconButton, Skeleton } from '@/shared/ui';
 
@@ -92,7 +92,7 @@ export function ChatScreen({ projectId }: { projectId: string }) {
                     {t('chat.title')}
                   </div>
                   <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                    <Folder className="size-3.5 shrink-0" aria-hidden />
+                    <ProjectAvatar imageUrl={project?.imageUrl} size="sm" />
                     <span className="truncate">
                       {project?.name}
                       {project &&

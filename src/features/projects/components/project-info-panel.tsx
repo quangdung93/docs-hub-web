@@ -7,10 +7,26 @@ import { useForm } from 'react-hook-form';
 
 import { type MessageKey, useI18n } from '@/core/i18n';
 import { formatDate } from '@/shared/lib/format';
-import { Avatar, Button, ConfirmDialog, Field, Input, Skeleton, Textarea } from '@/shared/ui';
+import {
+  Avatar,
+  Button,
+  ConfirmDialog,
+  ErrorState,
+  Field,
+  Input,
+  Skeleton,
+  Textarea,
+} from '@/shared/ui';
 
-import { useDeleteProject, useProject, useUpdateProject } from '../hooks/use-projects';
+import {
+  useDeleteProject,
+  useProject,
+  useUpdateProject,
+  useUploadAvatar,
+} from '../hooks/use-projects';
 import { type UpdateProjectInput, UpdateProjectInputSchema } from '../schemas/project.schema';
+
+import { ProjectAvatar } from './project-avatar';
 
 /**
  * "Thông tin chung" tab — an editable form plus the read-only overview and the
@@ -19,9 +35,10 @@ import { type UpdateProjectInput, UpdateProjectInputSchema } from '../schemas/pr
  */
 export function ProjectInfoPanel({ projectId, formId }: { projectId: string; formId: string }) {
   const { t, locale } = useI18n();
-  const { data: project, isPending } = useProject(projectId);
+  const { data: project, isPending, isError, error, refetch } = useProject(projectId);
   const updateProject = useUpdateProject(projectId);
   const deleteProject = useDeleteProject(projectId);
+  const uploadAvatar = useUploadAvatar(projectId);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const {
@@ -37,12 +54,27 @@ export function ProjectInfoPanel({ projectId, formId }: { projectId: string; for
       : undefined,
   });
 
-  if (isPending || !project) {
+  if (isPending) {
     return (
       <div className="grid gap-6 lg:grid-cols-3">
         <Skeleton className="h-72 lg:col-span-2" />
         <Skeleton className="h-72" />
       </div>
+    );
+  }
+
+  // Separate from the loading branch on purpose: `isPending` goes false when the
+  // query fails, so a combined `isPending || !project` left the skeleton on
+  // screen forever with no way to tell it apart from a slow load.
+  if (isError || !project) {
+    return (
+      <ErrorState
+        error={error}
+        title={t('projectAdmin.loadError')}
+        fallbackMessage={t('error.loadFailed')}
+        retryLabel={t('common.retry')}
+        onRetry={() => void refetch()}
+      />
     );
   }
 
@@ -54,6 +86,33 @@ export function ProjectInfoPanel({ projectId, formId }: { projectId: string; for
         className="space-y-4 lg:col-span-2"
         noValidate
       >
+        {/* The only way to change a logo after creation — the wizard sets one
+            once and nothing else could replace it. */}
+        <div className="flex items-center gap-4">
+          <label className="hover:border-brand/60 border-input cursor-pointer rounded-xl border-2 border-dashed p-1">
+            <ProjectAvatar imageUrl={project.imageUrl} size="lg" />
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              aria-label={t('projectAdmin.changeLogo')}
+              disabled={uploadAvatar.isPending}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) uploadAvatar.mutate(file);
+              }}
+            />
+          </label>
+          <div className="text-sm">
+            <div className="font-medium">{t('projectAdmin.logo')}</div>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {uploadAvatar.isPending
+                ? t('projectAdmin.logoUploading')
+                : t('projectAdmin.logoHint')}
+            </p>
+          </div>
+        </div>
+
         <Field
           label={t('projectAdmin.name')}
           htmlFor="settings-name"

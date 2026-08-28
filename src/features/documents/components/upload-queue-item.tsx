@@ -176,14 +176,18 @@ export function UploadQueueItem({
           )}
 
           {(rejected || failed) && (
-            <div className="text-status-failed/80 mt-0.5 text-xs">
-              {t(
-                failed
-                  ? item.error === 'no-version'
-                    ? 'upload.status.noVersionHint'
-                    : 'upload.status.failedHint'
-                  : 'upload.status.rejectedHint'
-              )}
+            <div className="text-status-failed/80 mt-0.5 text-xs break-words">
+              {/* The server's own words when it gave any — "File vượt quá dung
+                  lượng" tells the user what to do; the generic hint does not. */}
+              {failed && item.errorMessage
+                ? item.errorMessage
+                : t(
+                    failed
+                      ? item.error === 'no-version'
+                        ? 'upload.status.noVersionHint'
+                        : 'upload.status.failedHint'
+                      : 'upload.status.rejectedHint'
+                  )}
             </div>
           )}
         </div>

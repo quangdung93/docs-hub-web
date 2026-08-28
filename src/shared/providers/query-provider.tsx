@@ -1,9 +1,10 @@
 'use client';
 
-import { isServer, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { isServer, MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { AppError } from '@/core/api/errors';
+import { ToastViewport, showErrorToast } from '@/shared/ui/toast';
 
 /**
  * Defaults tuned for a BFF app:
@@ -13,6 +14,19 @@ import { AppError } from '@/core/api/errors';
  */
 function makeQueryClient(): QueryClient {
   return new QueryClient({
+    /**
+     * Every failed mutation surfaces, without each call site having to remember
+     * an `onError`. A mutation is something the user asked for — Save, Delete,
+     * Create — so silence after a failure reads as success. Queries are NOT
+     * handled here: a list that fails belongs inline on the screen (ErrorState),
+     * not in a toast that disappears.
+     */
+    mutationCache: new MutationCache({
+      onError: (error) => {
+        const message = error instanceof AppError ? error.message : (error as Error)?.message;
+        if (message) showErrorToast(message);
+      },
+    }),
     defaultOptions: {
       queries: {
         staleTime: 60_000,
@@ -45,5 +59,10 @@ function getQueryClient(): QueryClient {
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(getQueryClient);
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <ToastViewport />
+    </QueryClientProvider>
+  );
 }

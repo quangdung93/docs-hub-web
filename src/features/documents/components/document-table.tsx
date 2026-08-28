@@ -7,6 +7,7 @@ import { useI18n } from '@/core/i18n';
 import { formatRelativeTime } from '@/shared/lib/format';
 import {
   DataTable,
+  ErrorState,
   FileTypeIcon,
   IconButton,
   Pagination,
@@ -45,7 +46,7 @@ export function DocumentTable({
   statusFilter: DocumentStatus | 'all';
 }) {
   const { t, locale } = useI18n();
-  const { data: documents, isPending } = useDocuments(projectId);
+  const { data: documents, isPending, isError, error, refetch } = useDocuments(projectId);
   const deleteDocument = useDeleteDocument(projectId);
 
   const [page, setPage] = useState(1);
@@ -103,13 +104,30 @@ export function DocumentTable({
               </TableRow>
             ))}
 
-          {!isPending && visible.length === 0 && (
+          {/* Checked before the empty row: a failed query has no rows either,
+              and reporting that as "no documents" hides the fault and gives the
+              user no reason to retry. */}
+          {isError && (
+            <TableEmptyRow colSpan={COLUMN_COUNT}>
+              <ErrorState
+                error={error}
+                title={t('documents.loadError')}
+                fallbackMessage={t('error.loadFailed')}
+                retryLabel={t('common.retry')}
+                onRetry={() => void refetch()}
+                className="py-6"
+              />
+            </TableEmptyRow>
+          )}
+
+          {!isPending && !isError && visible.length === 0 && (
             <TableEmptyRow colSpan={COLUMN_COUNT}>
               {search || statusFilter !== 'all' ? t('documents.emptySearch') : t('documents.empty')}
             </TableEmptyRow>
           )}
 
           {!isPending &&
+            !isError &&
             visible.map((document) => (
               <TableRow key={document.id}>
                 <TableCell>

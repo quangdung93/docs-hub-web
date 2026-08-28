@@ -1,5 +1,6 @@
 export { CreateProjectWizard } from './components/create-project-wizard';
 export { MemberTable } from './components/member-table';
+export { ProjectAvatar } from './components/project-avatar';
 export { ProjectCard } from './components/project-card';
 export { ProjectGrid } from './components/project-grid';
 export { ProjectInfoPanel } from './components/project-info-panel';

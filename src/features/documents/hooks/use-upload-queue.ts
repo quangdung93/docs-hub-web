@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
 import { queryKeys } from '@/core/api';
+import { AppError } from '@/core/api/errors';
 
 import { documentsApi } from '../api/documents.api';
 import { useCreateProjectVersion, useProjectVersions } from './use-documents';
@@ -96,9 +97,13 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
             void queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
             void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
           })
-          // The server rejected the upload (bad format, storage down, …). Report
-          // it as failed — not as a format rejection, which would be a guess.
-          .catch(() => patch(item.id, { status: 'failed', progress: undefined }));
+          // Keep the backend's own message: "File vượt quá dung lượng" and
+          // "Không thể tạo revision" need different actions from the user, and
+          // collapsing both into a generic "upload failed" hides which one it was.
+          .catch((error: unknown) => {
+            const message = error instanceof AppError ? error.message : (error as Error)?.message;
+            patch(item.id, { status: 'failed', progress: undefined, errorMessage: message });
+          });
       }
     },
     [patch, projectId, queryClient, targetVersionId]

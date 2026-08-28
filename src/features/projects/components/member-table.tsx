@@ -11,6 +11,7 @@ import {
   type BadgeProps,
   Button,
   DataTable,
+  ErrorState,
   IconButton,
   SearchInput,
   Skeleton,
@@ -55,7 +56,7 @@ const COLUMN_COUNT = 5;
 
 export function MemberTable({ projectId }: { projectId: string }) {
   const { t, locale } = useI18n();
-  const { data: members, isPending } = useProjectMembers(projectId);
+  const { data: members, isPending, isError, error, refetch } = useProjectMembers(projectId);
   const [search, setSearch] = useState('');
 
   // Name and email arrive with the member row; the id stays in the haystack so a
@@ -107,11 +108,25 @@ export function MemberTable({ projectId }: { projectId: string }) {
               </TableRow>
             ))}
 
-          {!isPending && visible.length === 0 && (
+          {isError && (
+            <TableEmptyRow colSpan={COLUMN_COUNT}>
+              <ErrorState
+                error={error}
+                title={t('members.loadError')}
+                fallbackMessage={t('error.loadFailed')}
+                retryLabel={t('common.retry')}
+                onRetry={() => void refetch()}
+                className="py-6"
+              />
+            </TableEmptyRow>
+          )}
+
+          {!isPending && !isError && visible.length === 0 && (
             <TableEmptyRow colSpan={COLUMN_COUNT}>{t('members.empty')}</TableEmptyRow>
           )}
 
           {!isPending &&
+            !isError &&
             visible.map((member) => {
               const presentation = ROLE_PRESENTATION[member.role];
               return (

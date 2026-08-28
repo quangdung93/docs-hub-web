@@ -1,6 +1,6 @@
 'use client';
 
-import { Folder, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
@@ -9,6 +9,8 @@ import { Button, Card, CardBody, Tabs } from '@/shared/ui';
 
 import { useProject } from '../hooks/use-projects';
 import { projectRoutes } from '../routes';
+
+import { ProjectAvatar } from './project-avatar';
 
 import { MemberTable } from './member-table';
 import { ProjectInfoPanel } from './project-info-panel';
@@ -36,7 +38,7 @@ export function ProjectSettingsScreen({ projectId }: { projectId: string }) {
           backHref={projectRoutes.list}
           subtitle={
             <>
-              <Folder className="size-3.5" aria-hidden />
+              <ProjectAvatar imageUrl={project?.imageUrl} size="sm" />
               {project?.name}
             </>
           }

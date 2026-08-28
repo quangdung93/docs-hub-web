@@ -18,3 +18,5 @@ export { Stepper } from './stepper';
 export { Switch } from './switch';
 export { Tabs } from './tabs';
 export { DataTable, TableCell, TableEmptyRow, TableHead, TableHeaderCell, TableRow } from './table';
+export { ErrorState, messageOf } from './error-state';
+export { ToastViewport, showErrorToast } from './toast';

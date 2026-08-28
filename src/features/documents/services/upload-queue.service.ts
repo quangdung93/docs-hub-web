@@ -30,6 +30,8 @@ export interface UploadItem {
   chunkCount?: number;
   /** Why the row failed, when the reason is known ahead of the request. */
   error?: 'no-version';
+  /** The backend's own message for a server-side failure, shown verbatim. */
+  errorMessage?: string;
   /** Set once the server has accepted the file; enables retry and download. */
   documentId?: string;
   revisionId?: string;
