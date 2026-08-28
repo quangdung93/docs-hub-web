@@ -9,7 +9,7 @@ import { useI18n } from '@/core/i18n';
 import { orUnknown } from '@/shared/lib/format';
 import { ProjectAvatar, useProject } from '@/features/projects';
 import { projectRoutes } from '@/features/projects/routes';
-import { Button, Card, EmptyState, IconButton, Skeleton } from '@/shared/ui';
+import { Button, Card, EmptyState, IconButton, Skeleton, messageOf } from '@/shared/ui';
 
 import { useChat } from '../hooks/use-chat';
 
@@ -146,14 +146,17 @@ export function ChatScreen({ projectId }: { projectId: string }) {
               )}
 
               {askQuestion.isError && (
-                <p role="alert" className="text-status-failed text-sm">
-                  {t('chat.error')}
+                <p role="alert" className="text-status-failed text-sm break-words">
+                  {/* The backend's own words when it gave any — "RAGFlow chat
+                      không khả dụng" tells the user this is not their fault and
+                      not worth retyping; the generic line does not. */}
+                  {messageOf(askQuestion.error, t('chat.error'))}
                 </p>
               )}
             </div>
 
             <ChatComposer
-              onSubmit={(question) => askQuestion.mutate(question)}
+              onSubmit={(question) => askQuestion.mutateAsync(question)}
               pending={askQuestion.isPending}
             />
           </main>

@@ -14,7 +14,8 @@ export function ChatComposer({
   onSubmit,
   pending,
 }: {
-  onSubmit: (question: string) => void;
+  /** May return a promise; a rejection puts the question back in the box. */
+  onSubmit: (question: string) => void | Promise<unknown>;
   pending: boolean;
 }) {
   const { t } = useI18n();
@@ -24,9 +25,11 @@ export function ChatComposer({
   const send = () => {
     const question = value.trim();
     if (!question || pending) return;
-    onSubmit(question);
+    // Cleared optimistically so the box feels responsive, and put back if the
+    // send failed — a question lost to a backend outage means retyping it.
     setValue('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    void Promise.resolve(onSubmit(question)).catch(() => setValue(question));
   };
 
   return (
