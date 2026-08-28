@@ -7,6 +7,8 @@ import { useI18n } from '@/core/i18n';
 import { ScreenHeader } from '@/shared/components';
 import { Button, Card, CardBody, Tabs } from '@/shared/ui';
 
+import { VersionListPanel } from '@/features/documents';
+
 import { useProject } from '../hooks/use-projects';
 import { projectRoutes } from '../routes';
 
@@ -16,7 +18,7 @@ import { MemberTable } from './member-table';
 import { ProjectInfoPanel } from './project-info-panel';
 import { ProjectSettingsPanel } from './project-settings-panel';
 
-type TabValue = 'info' | 'members' | 'settings';
+type TabValue = 'info' | 'members' | 'settings' | 'versions';
 
 const INFO_FORM_ID = 'project-info-form';
 
@@ -59,6 +61,7 @@ export function ProjectSettingsScreen({ projectId }: { projectId: string }) {
             { value: 'info', label: t('projectAdmin.tab.info') },
             { value: 'members', label: t('projectAdmin.tab.members') },
             { value: 'settings', label: t('projectAdmin.tab.settings') },
+            { value: 'versions', label: t('versions.tab') },
           ]}
         />
 
@@ -66,6 +69,7 @@ export function ProjectSettingsScreen({ projectId }: { projectId: string }) {
           {tab === 'info' && <ProjectInfoPanel projectId={projectId} formId={INFO_FORM_ID} />}
           {tab === 'members' && <MemberTable projectId={projectId} />}
           {tab === 'settings' && <ProjectSettingsPanel projectId={projectId} />}
+          {tab === 'versions' && <VersionListPanel projectId={projectId} />}
         </CardBody>
       </Card>
 

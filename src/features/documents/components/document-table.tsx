@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { useI18n } from '@/core/i18n';
 import { formatRelativeTime } from '@/shared/lib/format';
 import {
+  Badge,
   DataTable,
   ErrorState,
   FileTypeIcon,
@@ -20,14 +21,14 @@ import {
 } from '@/shared/ui';
 
 import { documentsApi } from '../api/documents.api';
-import { useDeleteDocument, useDocuments } from '../hooks/use-documents';
+import { useDeleteDocument, useDocuments, useVersionLabels } from '../hooks/use-documents';
 import { formatBytes, matchesFormat } from '../services/upload-queue.service';
 import type { DocumentFormat, DocumentStatus } from '../schemas/document.schema';
 
 import { DocumentStatusBadge } from './document-status-badge';
 
 const PAGE_SIZE = 6;
-const COLUMN_COUNT = 6;
+const COLUMN_COUNT = 7;
 
 /**
  * Document list with search, status filter, row selection and pagination. Filter
@@ -39,14 +40,18 @@ export function DocumentTable({
   search,
   formatFilter = 'all',
   statusFilter,
+  versionFilter = 'all',
 }: {
   projectId: string;
   search: string;
   formatFilter?: DocumentFormat | 'all';
   statusFilter: DocumentStatus | 'all';
+  /** A project version id, or 'all'. */
+  versionFilter?: string;
 }) {
   const { t, locale } = useI18n();
   const { data: documents, isPending, isError, error, refetch } = useDocuments(projectId);
+  const { labelOf } = useVersionLabels(projectId);
   const deleteDocument = useDeleteDocument(projectId);
 
   const [page, setPage] = useState(1);
@@ -56,18 +61,23 @@ export function DocumentTable({
     return (documents ?? []).filter((document) => {
       const matchesQuery = !query || document.name.toLowerCase().includes(query);
       const matchesStatus = statusFilter === 'all' || document.status === statusFilter;
+      // Filtered here rather than server-side: the backend accepts
+      // `?project_version_id=` but ignores it — a bogus id still returns every
+      // document (verified 28/08/2026). Move this to the query the day it works.
+      const matchesVersion = versionFilter === 'all' || document.projectVersionId === versionFilter;
       return (
         matchesQuery &&
         matchesStatus &&
+        matchesVersion &&
         matchesFormat(document.fileName ?? document.name, formatFilter, document.format)
       );
     });
-  }, [documents, search, formatFilter, statusFilter]);
+  }, [documents, search, formatFilter, statusFilter, versionFilter]);
 
   // Narrowing the filters can leave `page` past the end of the new result set.
   // Deriving the key from the filters and resetting during render (rather than in
   // an effect) keeps the pager from flashing an empty page.
-  const filterKey = `${search}|${formatFilter}|${statusFilter}`;
+  const filterKey = `${search}|${formatFilter}|${statusFilter}|${versionFilter}`;
   const [lastFilterKey, setLastFilterKey] = useState(filterKey);
   if (filterKey !== lastFilterKey) {
     setLastFilterKey(filterKey);
@@ -86,6 +96,7 @@ export function DocumentTable({
             <TableHeaderCell>{t('documents.column.name')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.size')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.chunks')}</TableHeaderCell>
+            <TableHeaderCell>{t('documents.column.version')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.updatedAt')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.status')}</TableHeaderCell>
             <TableHeaderCell className="text-right">
@@ -122,7 +133,9 @@ export function DocumentTable({
 
           {!isPending && !isError && visible.length === 0 && (
             <TableEmptyRow colSpan={COLUMN_COUNT}>
-              {search || statusFilter !== 'all' ? t('documents.emptySearch') : t('documents.empty')}
+              {search || statusFilter !== 'all' || versionFilter !== 'all'
+                ? t('documents.emptySearch')
+                : t('documents.empty')}
             </TableEmptyRow>
           )}
 
@@ -145,6 +158,22 @@ export function DocumentTable({
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {document.chunkCount ?? t('common.emptyValue')}
+                </TableCell>
+
+                {/* Two different things share the word "version", so both are
+                    shown: the document's own revision number (v1 → v2 on
+                    re-upload) and the project version it was uploaded into. */}
+                <TableCell className="whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5">
+                    {document.revisionNo !== null && (
+                      <Badge variant="neutral">
+                        {t('history.revision', { no: document.revisionNo })}
+                      </Badge>
+                    )}
+                    <span className="text-muted-foreground text-xs">
+                      {labelOf(document.projectVersionId) ?? t('common.emptyValue')}
+                    </span>
+                  </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
                   {formatRelativeTime(document.updatedAt, locale)}

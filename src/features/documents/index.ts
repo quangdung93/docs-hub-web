@@ -1,4 +1,8 @@
+export { CreateVersionModal } from './components/create-version-modal';
+export { DocumentHistoryList } from './components/document-history-list';
 export { DocumentListScreen } from './components/document-list-screen';
+export { ExportReportMenu } from './components/export-report-menu';
+export { VersionListPanel } from './components/version-list-panel';
 export { DocumentStatusBadge } from './components/document-status-badge';
 export { DocumentTable } from './components/document-table';
 export { UploadPanel } from './components/upload-panel';
@@ -12,6 +16,7 @@ export {
   useDocumentDetail,
   useDocuments,
   useProjectVersions,
+  useVersionLabels,
   useRetryRevision,
   useUpdateDocument,
 } from './hooks/use-documents';
@@ -28,6 +33,7 @@ export {
   type Document,
   type DocumentFormat,
   type DocumentStatus,
+  type RevisionEntry,
 } from './schemas/document.schema';
 export {
   formatBytes,

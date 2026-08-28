@@ -9,6 +9,7 @@ export { Checkbox, Field, FieldError, Label, Textarea } from './field';
 export { extensionOf, FileTypeIcon } from './file-type-icon';
 export { IconButton } from './icon-button';
 export { Input } from './input';
+export { Modal } from './modal';
 export { Pagination } from './pagination';
 export { Progress } from './progress';
 export { SearchInput } from './search-input';
