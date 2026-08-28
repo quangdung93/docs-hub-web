@@ -35,14 +35,24 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json(failureEnvelope('REQ_403', 'Host not allowed'), { status: 403 });
   }
 
+  // Buffered, not streamed. A streamed body goes out chunked with no
+  // `Content-Length`, and S3 answers 411 to a PUT without one — the signature
+  // covers the length. Avatars are small, so holding one in memory is fine; a
+  // large upload would need a signed multipart flow rather than this relay.
+  const body = await req.arrayBuffer().catch(() => null);
+  if (!body) {
+    return NextResponse.json(failureEnvelope('REQ_400', 'Unreadable body'), { status: 400 });
+  }
+
   const upstream = await fetch(parsed, {
     method: 'PUT',
-    body: req.body,
-    headers: { 'content-type': req.headers.get('content-type') ?? 'application/octet-stream' },
-    // Streaming a request body requires this; Node's fetch rejects it otherwise.
-    duplex: 'half',
+    body,
+    headers: {
+      'content-type': req.headers.get('content-type') ?? 'application/octet-stream',
+      'content-length': String(body.byteLength),
+    },
     cache: 'no-store',
-  } as RequestInit).catch(() => null);
+  }).catch(() => null);
 
   if (!upstream) {
     return NextResponse.json(failureEnvelope('ERR_UPSTREAM', 'Storage unreachable'), {
