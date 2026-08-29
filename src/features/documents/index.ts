@@ -1,4 +1,5 @@
 export { CreateVersionModal } from './components/create-version-modal';
+export { DocumentDetailModal } from './components/document-detail-modal';
 export { DocumentHistoryList } from './components/document-history-list';
 export { DocumentListScreen } from './components/document-list-screen';
 export { ExportReportMenu } from './components/export-report-menu';

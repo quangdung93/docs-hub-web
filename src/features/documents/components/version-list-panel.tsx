@@ -1,12 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { GitCommitHorizontal, Plus } from 'lucide-react';
+import { Eye, GitCommitHorizontal, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { useI18n } from '@/core/i18n';
+import { projectRoutes } from '@/features/projects/routes';
 import { formatDate } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
-import { Badge, Button, ErrorState, Skeleton } from '@/shared/ui';
+import {
+  Badge,
+  Button,
+  ErrorState,
+  IconButton,
+  PendingActionDialogs,
+  Skeleton,
+  usePendingAction,
+} from '@/shared/ui';
 
 import { useCreateProjectVersion, useDocuments, useProjectVersions } from '../hooks/use-documents';
 
@@ -15,10 +25,11 @@ import { CreateVersionModal } from './create-version-modal';
 /**
  * Project versions, newest first, with the control that creates one.
  *
- * Deliberately read-and-create only. The mockup also offers "restore" and
- * "delete" per version, but docs-hub-api exposes neither (`DELETE .../versions/{id}`
- * and `.../restore` both 404, verified 28/08/2026) — a button that cannot work is
- * worse than no button, so they are absent rather than disabled-with-a-tooltip.
+ * Listing and creating are real. Restore and delete are not: docs-hub-api has
+ * no endpoint for either (`DELETE .../versions/{id}` and `.../restore` both 404,
+ * verified 28/08/2026). They are built anyway so the flow can be reviewed ahead
+ * of the API, and they ask the real confirmation before saying the feature is
+ * still being built — never a toast implying the data changed.
  */
 export function VersionListPanel({ projectId }: { projectId: string }) {
   const { t, locale } = useI18n();
@@ -26,6 +37,8 @@ export function VersionListPanel({ projectId }: { projectId: string }) {
   const { data: documents } = useDocuments(projectId);
   const createVersion = useCreateProjectVersion(projectId);
   const [modalOpen, setModalOpen] = useState(false);
+  const pending = usePendingAction();
+  const router = useRouter();
 
   // Newest first: the backend returns ascending `sequence_no`, and the version a
   // user cares about is almost always the one they just made.
@@ -105,11 +118,52 @@ export function VersionListPanel({ projectId }: { projectId: string }) {
                   </div>
                 </div>
 
-                <Badge variant="neutral" className="shrink-0">
-                  {version.status === 'draft'
-                    ? t('versions.status.draft')
-                    : t('versions.status.released')}
-                </Badge>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Badge variant="neutral">
+                    {version.status === 'draft'
+                      ? t('versions.status.draft')
+                      : t('versions.status.released')}
+                  </Badge>
+
+                  {/* Real: the documents screen filters by version client-side. */}
+                  <IconButton
+                    icon={Eye}
+                    size="sm"
+                    label={t('versions.viewDocuments')}
+                    onClick={() => router.push(projectRoutes.documents(projectId))}
+                  />
+
+                  {/* The latest version is already current, so restoring it is a
+                      no-op and deleting the only one users can upload into would
+                      strand the project. */}
+                  {!isLatest && (
+                    <>
+                      <IconButton
+                        icon={RotateCcw}
+                        size="sm"
+                        label={t('versions.restore')}
+                        onClick={() =>
+                          pending.request(
+                            t('versions.restore'),
+                            t('versions.restoreConfirm', { label: version.label })
+                          )
+                        }
+                      />
+                      <IconButton
+                        icon={Trash2}
+                        size="sm"
+                        label={t('versions.delete')}
+                        className="hover:text-status-failed"
+                        onClick={() =>
+                          pending.request(
+                            t('versions.delete'),
+                            t('versions.deleteConfirm', { label: version.label })
+                          )
+                        }
+                      />
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -120,6 +174,14 @@ export function VersionListPanel({ projectId }: { projectId: string }) {
         onClose={() => setModalOpen(false)}
         onCreate={(label, note) => createVersion.mutateAsync({ label, note })}
         isPending={createVersion.isPending}
+      />
+
+      <PendingActionDialogs
+        state={pending}
+        confirmLabel={t('common.continue')}
+        cancelLabel={t('common.cancel')}
+        doneLabel={t('common.done')}
+        noticeDescription={t('common.comingSoon')}
       />
     </section>
   );

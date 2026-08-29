@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 import { useI18n } from '@/core/i18n';
-import { Button, ConfirmDialog, Modal, Select } from '@/shared/ui';
+import { Button, Modal, PendingActionDialogs, Select, usePendingAction } from '@/shared/ui';
 
 import { useProjectVersions } from '../hooks/use-documents';
 
@@ -40,7 +40,7 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [notice, setNotice] = useState(false);
+  const pending = usePendingAction();
   const [versionId, setVersionId] = useState<string | undefined>();
   const [format, setFormat] = useState<ReportFormat>('xlsx');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -122,7 +122,16 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
               disabled={!selectedVersion}
               onClick={() => {
                 setModalOpen(false);
-                setNotice(true);
+                // The picked version and format are already known here; only the
+                // request is missing, so this is the one line that changes when
+                // an export endpoint lands.
+                pending.request(
+                  t('reports.modalTitle'),
+                  t('reports.exportConfirm', {
+                    label: ordered.find((v) => v.id === selectedVersion)?.label ?? '',
+                    format: format === 'xlsx' ? 'Excel (.xlsx)' : 'PDF',
+                  })
+                );
               }}
             >
               <Download aria-hidden />
@@ -174,15 +183,12 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
         </div>
       </Modal>
 
-      <ConfirmDialog
-        open={notice}
-        title={t('reports.modalTitle')}
-        description={t('common.comingSoon')}
-        confirmLabel={t('common.done')}
+      <PendingActionDialogs
+        state={pending}
+        confirmLabel={t('reports.export')}
         cancelLabel={t('common.cancel')}
-        onConfirm={() => setNotice(false)}
-        onCancel={() => setNotice(false)}
-        variant="notice"
+        doneLabel={t('common.done')}
+        noticeDescription={t('common.comingSoon')}
       />
     </div>
   );

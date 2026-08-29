@@ -25,6 +25,7 @@ import { useDeleteDocument, useDocuments, useVersionLabels } from '../hooks/use-
 import { formatBytes, matchesFormat } from '../services/upload-queue.service';
 import type { DocumentFormat, DocumentStatus } from '../schemas/document.schema';
 
+import { DocumentDetailModal } from './document-detail-modal';
 import { DocumentStatusBadge } from './document-status-badge';
 
 const PAGE_SIZE = 6;
@@ -55,6 +56,8 @@ export function DocumentTable({
   const deleteDocument = useDeleteDocument(projectId);
 
   const [page, setPage] = useState(1);
+  /** Which row's detail modal is open, and which of its tabs. */
+  const [opened, setOpened] = useState<{ id: string; tab: 'info' | 'history' } | null>(null);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -144,13 +147,18 @@ export function DocumentTable({
             visible.map((document) => (
               <TableRow key={document.id}>
                 <TableCell>
-                  <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setOpened({ id: document.id, tab: 'info' })}
+                    className="focus-visible:ring-ring/40 flex items-center gap-2.5 rounded-md text-left focus-visible:ring-2 focus-visible:outline-none"
+                    aria-label={t('documentDetail.open')}
+                  >
                     <FileTypeIcon fileName={document.fileName ?? document.name} />
                     <div className="leading-tight">
-                      <div className="font-medium">{document.name}</div>
+                      <div className="font-medium hover:underline">{document.name}</div>
                       <div className="text-muted-foreground text-xs">{document.format}</div>
                     </div>
-                  </div>
+                  </button>
                 </TableCell>
 
                 <TableCell className="text-muted-foreground">
@@ -166,9 +174,15 @@ export function DocumentTable({
                 <TableCell className="whitespace-nowrap">
                   <span className="inline-flex items-center gap-1.5">
                     {document.revisionNo !== null && (
-                      <Badge variant="neutral">
-                        {t('history.revision', { no: document.revisionNo })}
-                      </Badge>
+                      <button
+                        type="button"
+                        onClick={() => setOpened({ id: document.id, tab: 'history' })}
+                        className="focus-visible:ring-ring/40 rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                      >
+                        <Badge variant="neutral" className="hover:bg-accent cursor-pointer">
+                          {t('history.revision', { no: document.revisionNo })}
+                        </Badge>
+                      </button>
                     )}
                     <span className="text-muted-foreground text-xs">
                       {labelOf(document.projectVersionId) ?? t('common.emptyValue')}
@@ -220,6 +234,13 @@ export function DocumentTable({
             ))}
         </tbody>
       </DataTable>
+
+      <DocumentDetailModal
+        projectId={projectId}
+        document={(documents ?? []).find((item) => item.id === opened?.id) ?? null}
+        initialTab={opened?.tab ?? 'info'}
+        onClose={() => setOpened(null)}
+      />
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
         <span className="text-muted-foreground inline-flex items-center gap-1.5">

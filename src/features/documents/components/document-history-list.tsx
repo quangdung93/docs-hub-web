@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
 import { formatRelativeTime } from '@/shared/lib/format';
@@ -9,6 +9,7 @@ import { ErrorState, FileTypeIcon, Skeleton } from '@/shared/ui';
 import { useDocuments, useVersionLabels } from '../hooks/use-documents';
 import { formatBytes } from '../services/upload-queue.service';
 
+import { DocumentDetailModal } from './document-detail-modal';
 import { DocumentStatusBadge } from './document-status-badge';
 
 /**
@@ -28,6 +29,7 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
   const { t, locale } = useI18n();
   const { data: documents, isPending, isError, error, refetch } = useDocuments(projectId);
   const { labelOf } = useVersionLabels(projectId);
+  const [openedId, setOpenedId] = useState<string | null>(null);
 
   const entries = useMemo(
     () =>
@@ -79,9 +81,11 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
       {entries.map((entry) => {
         const versionLabel = labelOf(entry.projectVersionId);
         return (
-          <div
+          <button
+            type="button"
             key={entry.id}
-            className="border-border hover:bg-accent/40 flex items-center justify-between gap-3 rounded-lg border p-2.5 transition-colors"
+            onClick={() => setOpenedId(entry.documentId)}
+            className="border-border hover:bg-accent/40 focus-visible:ring-ring/40 flex w-full items-center justify-between gap-3 rounded-lg border p-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <div className="flex min-w-0 items-center gap-2.5">
               <FileTypeIcon fileName={entry.fileName} />
@@ -102,9 +106,16 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
             <div className="flex shrink-0 items-center gap-2">
               <DocumentStatusBadge status={entry.status} />
             </div>
-          </div>
+          </button>
         );
       })}
+
+      <DocumentDetailModal
+        projectId={projectId}
+        document={(documents ?? []).find((item) => item.id === openedId) ?? null}
+        initialTab="history"
+        onClose={() => setOpenedId(null)}
+      />
     </div>
   );
 }

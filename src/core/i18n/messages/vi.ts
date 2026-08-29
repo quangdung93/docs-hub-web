@@ -231,6 +231,31 @@ export const vi = {
   'versions.filterAll': 'Tất cả phiên bản',
   'versions.filterLabel': 'Phiên bản',
 
+  'versions.restore': 'Khôi phục phiên bản này',
+  'versions.restoreConfirm':
+    'Khôi phục dự án về phiên bản "{label}"? Tài liệu của dự án sẽ quay lại đúng trạng thái tại thời điểm đó.',
+  'versions.delete': 'Xóa phiên bản',
+  'versions.deleteConfirm':
+    'Xóa phiên bản "{label}"? Các tài liệu thuộc phiên bản này sẽ không còn được gom nhóm theo nó.',
+  'versions.viewDocuments': 'Xem tài liệu trong phiên bản này',
+
+  // ── Chi tiết tài liệu ────────────────────────────────────────────────────
+  'documentDetail.infoTab': 'Thông tin',
+  'documentDetail.size': 'Dung lượng',
+  'documentDetail.chunks': 'Số đoạn (chunk)',
+  'documentDetail.updated': 'Cập nhật gần nhất',
+  'documentDetail.status': 'Trạng thái',
+  'documentDetail.currentVersion': 'Phiên bản hiện tại',
+  'documentDetail.projectVersion': 'Thuộc phiên bản dự án',
+  'documentDetail.uploader': 'Người tải lên',
+  'documentDetail.historyHint':
+    'Mỗi lần tải lên tệp thay thế sẽ tạo một phiên bản mới của tài liệu này.',
+  'documentDetail.restore': 'Khôi phục',
+  'documentDetail.restoreConfirm':
+    'Khôi phục "{name}" về bản {no}? Bản này sẽ trở thành bản hiện tại của tài liệu.',
+  'documentDetail.notAvailable': 'Backend chưa cung cấp',
+  'documentDetail.open': 'Xem chi tiết tài liệu',
+
   // ── Lịch sử thay đổi tài liệu ────────────────────────────────────────────
   'history.tab': 'Lịch sử thay đổi',
   'history.documentsTab': 'Tài liệu',
@@ -257,6 +282,7 @@ export const vi = {
   'reports.scopeOption': 'Toàn bộ dự án · phiên bản {label}',
   'reports.format': 'Định dạng xuất',
   'reports.export': 'Xuất file',
+  'reports.exportConfirm': 'Xuất UAT Report cho phiên bản "{label}" dưới dạng {format}?',
   'reports.noVersion': 'Dự án chưa có phiên bản nào để xuất báo cáo.',
 
   // Pipeline xử lý — các bước một file phải qua trước khi tra cứu được.

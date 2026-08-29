@@ -11,6 +11,7 @@ export { IconButton } from './icon-button';
 export { Input } from './input';
 export { Modal } from './modal';
 export { Pagination } from './pagination';
+export { PendingActionDialogs, usePendingAction } from './pending-action';
 export { Progress } from './progress';
 export { SearchInput } from './search-input';
 export { Select } from './select';

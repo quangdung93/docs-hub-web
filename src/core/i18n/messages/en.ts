@@ -228,6 +228,31 @@ export const en: Record<MessageKey, string> = {
   'versions.filterAll': 'All versions',
   'versions.filterLabel': 'Version',
 
+  'versions.restore': 'Restore this version',
+  'versions.restoreConfirm':
+    'Restore the project to "{label}"? Its documents return to the state they were in then.',
+  'versions.delete': 'Delete version',
+  'versions.deleteConfirm':
+    'Delete "{label}"? Documents in this version will no longer be grouped under it.',
+  'versions.viewDocuments': "View this version's documents",
+
+  // ── Document detail ──────────────────────────────────────────────────────
+  'documentDetail.infoTab': 'Details',
+  'documentDetail.size': 'Size',
+  'documentDetail.chunks': 'Chunks',
+  'documentDetail.updated': 'Last updated',
+  'documentDetail.status': 'Status',
+  'documentDetail.currentVersion': 'Current revision',
+  'documentDetail.projectVersion': 'Project version',
+  'documentDetail.uploader': 'Uploaded by',
+  'documentDetail.historyHint':
+    'Every replacement upload creates a new revision of this document.',
+  'documentDetail.restore': 'Restore',
+  'documentDetail.restoreConfirm':
+    'Restore "{name}" to revision {no}? It becomes the current revision.',
+  'documentDetail.notAvailable': 'Not provided by the backend',
+  'documentDetail.open': 'View document details',
+
   // ── Document change history ──────────────────────────────────────────────
   'history.tab': 'Change history',
   'history.documentsTab': 'Documents',
@@ -253,6 +278,7 @@ export const en: Record<MessageKey, string> = {
   'reports.scopeOption': 'Whole project · version {label}',
   'reports.format': 'Export format',
   'reports.export': 'Export file',
+  'reports.exportConfirm': 'Export the UAT Report for "{label}" as {format}?',
   'reports.noVersion': 'This project has no version to report on yet.',
 
   // Ingestion pipeline — the stages a file goes through before it is searchable.
