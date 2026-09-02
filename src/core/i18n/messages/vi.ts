@@ -321,6 +321,41 @@ export const vi = {
   'chat.citations.page': 'trang {page}',
   'chat.citations.empty': 'Chọn một trích dẫn để xem đoạn nguồn.',
   'chat.error': 'Không lấy được câu trả lời. Vui lòng thử lại.',
+
+  // ── MCP integration test ─────────────────────────────────────────────────
+  'mcp.title': 'Kiểm tra tích hợp MCP',
+  'mcp.subtitle':
+    'Kết nối thử tới một MCP server để xem nó sống chưa và cung cấp những tool gì.',
+  'mcp.serverUrl': 'Địa chỉ MCP server',
+  'mcp.serverUrlHint': 'Đường dẫn đầy đủ tới endpoint MCP, thường kết thúc bằng /mcp.',
+  'mcp.token': 'Token xác thực (tuỳ chọn)',
+  'mcp.tokenHint':
+    'Gửi kèm dạng Authorization: Bearer. Token chỉ nằm trên trình duyệt của bạn, không lưu ở server.',
+  'mcp.connect': 'Kết nối thử',
+  'mcp.connecting': 'Đang kết nối…',
+  'mcp.urlRequired': 'Vui lòng nhập địa chỉ MCP server.',
+  'mcp.steps': 'Các bước bắt tay',
+  'mcp.tools': 'Tool server cung cấp',
+  'mcp.toolsEmpty': 'Server không khai báo tool nào.',
+  'mcp.noRun': 'Chưa chạy lần nào. Nhập địa chỉ rồi bấm Kết nối thử.',
+  'mcp.session': 'Mã phiên',
+  'mcp.noSession': 'Server không cấp mã phiên',
+  'mcp.callTool': 'Gọi thử',
+  'mcp.arguments': 'Tham số (JSON)',
+  'mcp.invalidJson': 'Tham số không phải JSON hợp lệ.',
+  'mcp.response': 'Kết quả trả về',
+  'mcp.install': 'Cài vào Claude Code',
+  'mcp.installHint':
+    'Chạy lệnh này trong terminal để Claude Code kết nối tới server. Gỡ ra bằng lệnh remove bên dưới.',
+  'mcp.remove': 'Gỡ kết nối',
+  'mcp.copy': 'Sao chép',
+  'mcp.copied': 'Đã sao chép',
+  'mcp.serverName': 'Tên kết nối',
+  'mcp.serverNameHint': 'Tên để gọi server này trong Claude Code.',
+  'mcp.rawResponse': 'Nội dung thô',
+  'mcp.status': 'Trạng thái',
+  'mcp.duration': 'Thời gian',
+
 } as const;
 
 export type MessageKey = keyof typeof vi;

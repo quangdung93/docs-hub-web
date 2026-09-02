@@ -318,4 +318,38 @@ export const en: Record<MessageKey, string> = {
   'chat.citations.page': 'page {page}',
   'chat.citations.empty': 'Select a citation to view its source passage.',
   'chat.error': 'Could not get an answer. Please try again.',
+
+  // ── MCP integration test ─────────────────────────────────────────────────
+  'mcp.title': 'MCP integration test',
+  'mcp.subtitle': 'Connect to an MCP server to see whether it is up and what tools it offers.',
+  'mcp.serverUrl': 'MCP server URL',
+  'mcp.serverUrlHint': 'The full MCP endpoint, usually ending in /mcp.',
+  'mcp.token': 'Auth token (optional)',
+  'mcp.tokenHint':
+    'Sent as Authorization: Bearer. The token stays in your browser and is never stored on the server.',
+  'mcp.connect': 'Connect',
+  'mcp.connecting': 'Connecting…',
+  'mcp.urlRequired': 'Please enter the MCP server URL.',
+  'mcp.steps': 'Handshake steps',
+  'mcp.tools': 'Tools offered',
+  'mcp.toolsEmpty': 'The server advertises no tools.',
+  'mcp.noRun': 'Nothing run yet. Enter a URL and press Connect.',
+  'mcp.session': 'Session id',
+  'mcp.noSession': 'No session id issued',
+  'mcp.callTool': 'Call',
+  'mcp.arguments': 'Arguments (JSON)',
+  'mcp.invalidJson': 'Arguments are not valid JSON.',
+  'mcp.response': 'Response',
+  'mcp.install': 'Add to Claude Code',
+  'mcp.installHint':
+    'Run this in a terminal to connect Claude Code to the server. Remove it with the command below.',
+  'mcp.remove': 'Remove',
+  'mcp.copy': 'Copy',
+  'mcp.copied': 'Copied',
+  'mcp.serverName': 'Connection name',
+  'mcp.serverNameHint': 'The name this server goes by in Claude Code.',
+  'mcp.rawResponse': 'Raw body',
+  'mcp.status': 'Status',
+  'mcp.duration': 'Time',
+
 };
