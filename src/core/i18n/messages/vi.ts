@@ -320,6 +320,7 @@ export const vi = {
   'chat.citations.pages': 'Trang {pages} · đoạn liên quan',
   'chat.citations.page': 'trang {page}',
   'chat.citations.empty': 'Chọn một trích dẫn để xem đoạn nguồn.',
+  'chat.citations.truncated': '… đoạn trích bị cắt bớt',
   'chat.error': 'Không lấy được câu trả lời. Vui lòng thử lại.',
 } as const;
 

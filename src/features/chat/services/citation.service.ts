@@ -47,28 +47,107 @@ export function pageRangeOf(pages: readonly (number | undefined)[]): string {
 }
 
 /**
- * Does this excerpt read as code rather than prose?
+ * Excerpt after the backend's HTML has been turned into readable text.
  *
- * Excerpts are raw document text, and a chunk lifted out of an AndroidManifest or
- * a config file is unreadable in a proportional font — the indentation that gives
- * it structure collapses visually. Prose is the common case, so the test is
- * deliberately conservative: it only fires on markers that essentially never
- * appear in a sentence.
- *
- * ponytail: heuristic, not a parser. The cost of a wrong answer is a font choice,
- * so a language detector would be gold-plating.
+ * `isTruncated` is not cosmetic: the backend cuts excerpts at a fixed 1000
+ * characters with no regard for markup, so the tail of a table is simply gone.
+ * Rendering the surviving rows without saying so presents a partial table as a
+ * whole one, which is worse than showing nothing.
  */
-export function looksLikeCode(excerpt: string | undefined): boolean {
-  if (!excerpt) return false;
+export interface RenderedExcerpt {
+  /** Plain text, one table cell per line, ready for `whitespace-pre-wrap`. */
+  text: string;
+  /** Table caption, when the backend supplied one — it names the source section. */
+  caption: string | null;
+  /** True when the excerpt was cut mid-content and the reader is missing the end. */
+  isTruncated: boolean;
+  /** Whether the source was HTML at all; plain excerpts pass through untouched. */
+  isTable: boolean;
+}
 
-  const markers = [
-    /<\/?[a-z][\w.-]*[\s>/]/i, // an XML/HTML tag
-    /\/>/, // a self-closing tag
-    /^\s*[{}[\]]/m, // a line opening or closing a block
-    /^\s*(?:function|const|let|var|class|import|export|def|public|private)\s/m,
-    /^\s*```/m, // a fenced block
-    /^\s*[\w.-]+\s*[:=]\s*["'{[]/m, // key = "value" / key: {
-  ];
+/** Does this excerpt carry the HTML markup the backend emits for tables? */
+function containsHtml(excerpt: string): boolean {
+  return /<\/?(?:table|thead|tbody|tr|td|th|caption|p|div|ul|ol|li|h[1-6]|br)\b[^>]*>/i.test(
+    excerpt
+  );
+}
 
-  return markers.some((marker) => marker.test(excerpt));
+/** The five entities that actually appear in this backend's output. */
+function decodeEntities(text: string): string {
+  return (
+    text
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#0?39;|&apos;/g, "'")
+      // Ampersand last, or "&amp;lt;" would decode twice into "<".
+      .replace(/&amp;/g, '&')
+  );
+}
+
+/**
+ * Turn a backend excerpt into text a person can read in a narrow panel.
+ *
+ * The excerpts are Word tables serialised to HTML. Rendered as-is they show
+ * their tags; rendered as real HTML they would need sanitising *and* a table
+ * wide enough to be useless at 320px. So the markup becomes structure instead:
+ * one cell per line, a blank line between rows.
+ *
+ * Nothing here is ever inserted as HTML — the output is a plain string. That
+ * sidesteps XSS entirely rather than defending against it, which matters
+ * because excerpts come from user-uploaded documents.
+ *
+ * ponytail: regex, not a DOM parse. The input is one generator's table markup,
+ * and it arrives truncated mid-tag often enough that a strict parser would
+ * reject what a person can still read.
+ */
+export function renderExcerpt(excerpt: string | undefined): RenderedExcerpt {
+  if (!excerpt) {
+    return { text: '', caption: null, isTruncated: false, isTable: false };
+  }
+
+  if (!containsHtml(excerpt)) {
+    return { text: excerpt, caption: null, isTruncated: false, isTable: false };
+  }
+
+  // A trailing `<td` with no `>` means the cut landed inside a tag; an unclosed
+  // <table> means it landed between them. Both lose the end of the content.
+  const cutMidTag = /<[^>]*$/.test(excerpt);
+  const openRows = (excerpt.match(/<tr\b/gi) ?? []).length;
+  const closedRows = (excerpt.match(/<\/tr>/gi) ?? []).length;
+  const isTruncated = cutMidTag || openRows > closedRows || !/<\/table>\s*$/i.test(excerpt.trim());
+
+  // Drop a dangling partial tag before anything else, so its fragments cannot
+  // leak into the text as stray characters.
+  let working = excerpt.replace(/<[^>]*$/, '');
+
+  // The caption names the document section this table came from — the single
+  // most useful line for locating the passage, so it is lifted out rather than
+  // left to blend into the cells.
+  const captionMatch = working.match(/<caption[^>]*>([\s\S]*?)<\/caption>/i);
+  const caption = captionMatch ? decodeEntities(stripTags(captionMatch[1]!)).trim() : null;
+  working = working.replace(/<caption[^>]*>[\s\S]*?<\/caption>/gi, '');
+
+  // Rows are split on their own boundary and cells within them on theirs, so an
+  // empty cell can be dropped without also swallowing the blank line that
+  // separates two rows. Collapsing on newline counts alone cannot tell those
+  // apart — an empty middle cell and a row break both look like "\n\n".
+  const rows = working
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|li|h[1-6])>/gi, '\n')
+    .split(/<\/tr>/i)
+    .map((row) =>
+      row
+        .split(/<\/(?:td|th)>/i)
+        .map((cell) => decodeEntities(stripTags(cell)).trim())
+        .filter(Boolean)
+        .join('\n')
+    )
+    .filter(Boolean);
+
+  return { text: rows.join('\n\n'), caption, isTruncated, isTable: true };
+}
+
+function stripTags(html: string): string {
+  return html.replace(/<[^>]*>/g, '');
 }

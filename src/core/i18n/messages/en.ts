@@ -317,5 +317,6 @@ export const en: Record<MessageKey, string> = {
   'chat.citations.pages': 'Pages {pages} · relevant passages',
   'chat.citations.page': 'page {page}',
   'chat.citations.empty': 'Select a citation to view its source passage.',
+  'chat.citations.truncated': '… excerpt was cut short',
   'chat.error': 'Could not get an answer. Please try again.',
 };

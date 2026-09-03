@@ -9,7 +9,7 @@ import { IconButton } from '@/shared/ui';
 
 import type { Citation } from '../schemas/chat.schema';
 import { useResizablePanel } from '../hooks/use-resizable-panel';
-import { looksLikeCode, pageRangeOf } from '../services/citation.service';
+import { pageRangeOf, renderExcerpt } from '../services/citation.service';
 
 /**
  * Source sidebar. The active citation is highlighted and scrolled into view —
@@ -116,23 +116,50 @@ export function CitationPanel({
                     ? null
                     : ` · ${t('chat.citations.page', { page: citation.page })}`}
                 </div>
-                {/* `whitespace-pre-wrap` keeps the document's own line breaks and
-                    indentation. Without it every newline collapses and the whole
-                    excerpt renders as one unreadable paragraph. */}
-                <div
-                  className={cn(
-                    'whitespace-pre-wrap',
-                    looksLikeCode(citation.excerpt) &&
-                      'bg-surface-muted/60 overflow-x-auto rounded px-2 py-1.5 font-mono text-xs'
-                  )}
-                >
-                  {citation.excerpt}
-                </div>
+                <CitationExcerpt excerpt={citation.excerpt} />
               </div>
             ))}
           </>
         )}
       </div>
     </aside>
+  );
+}
+
+/**
+ * One excerpt's body.
+ *
+ * The backend serialises Word tables to HTML, so a raw excerpt shows the reader
+ * `<tr><td>` instead of a table. `renderExcerpt` turns that markup back into
+ * structure — one cell per line — which reads far better in a 320px column than
+ * a five-column table would, and never touches `dangerouslySetInnerHTML`:
+ * excerpts come from user-uploaded documents, so not building HTML at all beats
+ * sanitising it.
+ */
+function CitationExcerpt({ excerpt }: { excerpt: string | undefined }) {
+  const { t } = useI18n();
+  const { text, caption, isTruncated, isTable } = renderExcerpt(excerpt);
+
+  return (
+    <>
+      {/* The caption names the document section the table came from, which is
+          the fastest way to locate the passage in the original. */}
+      {caption && (
+        <p className="text-muted-foreground mb-1.5 text-[11px] leading-snug italic">{caption}</p>
+      )}
+
+      {/* `whitespace-pre-wrap` keeps the line breaks that now carry the table's
+          structure, and the document's own breaks in plain excerpts. */}
+      <div className={cn('whitespace-pre-wrap', isTable && 'text-xs')}>{text}</div>
+
+      {/* The backend cuts excerpts at a fixed length regardless of markup, so a
+          table can lose its last rows. Saying so beats presenting a partial
+          table as if it were whole. */}
+      {isTruncated && (
+        <p className="text-muted-foreground mt-1.5 text-[11px] italic">
+          {t('chat.citations.truncated')}
+        </p>
+      )}
+    </>
   );
 }
