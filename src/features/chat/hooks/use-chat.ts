@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/core/api';
@@ -50,7 +50,18 @@ export function useChat(projectId: string) {
 
   const conversation = useQuery(conversationQueryOptions(projectId, conversationId));
 
-  const key = queryKeys.chat.conversation(projectId, conversationId ?? 'none');
+  /** The bubble `onMutate` just wrote, so `mutationFn` can re-key it alone. */
+  const pendingMessage = useRef<ChatMessage | null>(null);
+
+  /**
+   * Cache slot for a conversation that does not exist yet. Shared by every new
+   * conversation in the session, so it must be cleared once its contents are
+   * adopted under a real id — otherwise the next one inherits the last question.
+   */
+  const NEW_CONVERSATION_KEY = queryKeys.chat.conversation(projectId, 'none');
+  const key = conversationId
+    ? queryKeys.chat.conversation(projectId, conversationId)
+    : NEW_CONVERSATION_KEY;
 
   const ask = useMutation({
     /**
@@ -69,8 +80,29 @@ export function useChat(projectId: string) {
         // product does — the backend accepts any string and never derives one.
         const created = await chatApi.create(projectId, question.slice(0, 80), scope);
         id = created.id;
+
+        // The optimistic bubble was written under the "none" key, because no id
+        // existed when `onMutate` ran. Carry it across, or the moment
+        // `setConversationId` re-renders the component onto the real key the
+        // question disappears again — the server's fresh conversation has no
+        // messages in it yet.
+        //
+        // Only *this* mutation's bubble moves. `onMutate` stashes it in a ref
+        // because TanStack does not pass its context here, and reading the
+        // "none" key wholesale is what caused the bug: that slot is shared by
+        // every new conversation in the session, so it still held the previous
+        // one's question and dragged it into the new transcript.
+        const optimistic = pendingMessage.current;
+        queryClient.setQueryData<Conversation>(queryKeys.chat.conversation(projectId, id), {
+          ...created,
+          messages: optimistic ? [optimistic] : created.messages,
+        });
+
+        // The placeholder has been adopted under the real id; leaving it behind
+        // is what let it leak into the next conversation.
+        queryClient.removeQueries({ queryKey: NEW_CONVERSATION_KEY, exact: true });
+
         setConversationId(id);
-        queryClient.setQueryData(queryKeys.chat.conversation(projectId, id), created);
         void queryClient.invalidateQueries({
           queryKey: queryKeys.chat.conversations(projectId),
         });
@@ -96,15 +128,25 @@ export function useChat(projectId: string) {
         createdAt: new Date().toISOString(),
       };
 
-      // Only an existing conversation has something to append to. For the first
-      // question the cache is legitimately empty; `onSuccess` inserts the pair.
-      if (previous) {
-        queryClient.setQueryData<Conversation>(activeKey, {
-          ...previous,
-          messages: [...previous.messages, optimistic],
-        });
-      }
+      // Written unconditionally, including for the very first question. That
+      // case has no conversation yet, so `previous` is undefined and an earlier
+      // `if (previous)` guard skipped the write entirely — which is why the
+      // first question showed nothing but a spinner until the answer landed.
+      // A placeholder conversation stands in until the server returns the real
+      // one; it is replaced wholesale in `mutationFn`, never merged.
+      queryClient.setQueryData<Conversation>(activeKey, {
+        ...(previous ?? {
+          id: conversationId ?? 'pending',
+          title: question.slice(0, 80),
+          scope,
+          createdAt: optimistic.createdAt,
+          updatedAt: optimistic.createdAt,
+          messages: [],
+        }),
+        messages: [...(previous?.messages ?? []), optimistic],
+      });
 
+      pendingMessage.current = optimistic;
       return { previous, optimistic, key: activeKey };
     },
 
@@ -122,9 +164,13 @@ export function useChat(projectId: string) {
     },
 
     onError: (_error, _question, context) => {
+      if (!context) return;
       // Rolls back against the key `onMutate` wrote to. A first question has no
-      // previous state to restore — nothing was written, so nothing to undo.
-      if (context?.previous) queryClient.setQueryData(context.key, context.previous);
+      // previous state: `onMutate` invented a placeholder conversation, so the
+      // undo is to remove the entry rather than restore one. Leaving it would
+      // strand a question with no answer and no way to retry it.
+      if (context.previous) queryClient.setQueryData(context.key, context.previous);
+      else queryClient.removeQueries({ queryKey: context.key, exact: true });
     },
   });
 

@@ -67,11 +67,14 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
     <main className="flex-1 p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
+          {/* Back goes to the project's chat, not the project list: this screen
+              is only reachable from there (and from the versions tab, which is
+              itself one step further in), so the list is two steps back. */}
           <IconButton
             icon={ArrowLeft}
             label={t('common.back')}
             className="border-border size-9 border"
-            onClick={() => router.push(projectRoutes.list)}
+            onClick={() => router.push(projectRoutes.chat(projectId))}
           />
           <div>
             <h1 className="text-lg font-semibold tracking-tight">{t('documents.title')}</h1>

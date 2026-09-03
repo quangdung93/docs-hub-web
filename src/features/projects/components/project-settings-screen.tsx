@@ -37,7 +37,9 @@ export function ProjectSettingsScreen({ projectId }: { projectId: string }) {
       <Card>
         <ScreenHeader
           title={t('projectAdmin.title')}
-          backHref={projectRoutes.list}
+          // Same as the documents screen: settings hang off a project, and the
+          // project's home is its chat.
+          backHref={projectRoutes.chat(projectId)}
           subtitle={
             <>
               <ProjectAvatar imageUrl={project?.imageUrl} size="sm" />
