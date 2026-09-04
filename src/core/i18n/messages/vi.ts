@@ -256,6 +256,13 @@ export const vi = {
   'documentDetail.notAvailable': 'Backend chưa cung cấp',
   'documentDetail.open': 'Xem chi tiết tài liệu',
 
+  'preview.title': 'Xem tài liệu',
+  'preview.open': 'Xem tài liệu',
+  'preview.unsupported': 'Trình duyệt không xem trực tiếp được định dạng {format}.',
+  'preview.unsupportedHint': 'Tải tệp về để mở bằng ứng dụng tương ứng.',
+  'preview.loadFailed': 'Không tải được nội dung tệp.',
+  'preview.openInTab': 'Mở ở tab mới',
+
   // ── Lịch sử thay đổi tài liệu ────────────────────────────────────────────
   'history.tab': 'Lịch sử thay đổi',
   'history.documentsTab': 'Tài liệu',
@@ -282,6 +289,9 @@ export const vi = {
   'reports.scopeOption': 'Toàn bộ dự án · phiên bản {label}',
   'reports.format': 'Định dạng xuất',
   'reports.export': 'Xuất file',
+  'reports.exporting': 'Đang xuất…',
+  'reports.exportFailed': 'Không xuất được báo cáo.',
+  'reports.pdfComingSoon': 'Hiện chỉ xuất được định dạng Excel (.xlsx).',
   'reports.exportConfirm': 'Xuất UAT Report cho phiên bản "{label}" dưới dạng {format}?',
   'reports.noVersion': 'Dự án chưa có phiên bản nào để xuất báo cáo.',
 

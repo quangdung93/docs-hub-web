@@ -101,6 +101,7 @@ export function toDocument(dto: DocumentDto, revisions?: readonly RevisionDto[] 
     status: toDocumentStatus(revision),
     updatedAt: dto.updated_at,
     fileName: revision?.file_name ?? null,
+    mediaType: revision?.media_type ?? null,
     revisionId: revision?.id ?? null,
     revisionNo: revision?.revision_no ?? null,
     errorMessage: revision?.error_detail ?? revision?.ragflow_last_error ?? null,

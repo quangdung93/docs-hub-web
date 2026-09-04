@@ -76,6 +76,8 @@ export const endpoints = {
       `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/retry`,
     revisionDownload: (projectId: string, documentId: string, revisionId: string) =>
       `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/download`,
+    /** Export the project's documents as an ISC-template UAT report (.xlsx). */
+    uatReport: (projectId: string) => `${INTERNAL}/projects/${projectId}/documents/uat-report`,
     revisionView: (projectId: string, documentId: string, revisionId: string) =>
       `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/view`,
   },

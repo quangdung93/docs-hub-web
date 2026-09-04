@@ -2,6 +2,7 @@ export { CreateVersionModal } from './components/create-version-modal';
 export { DocumentDetailModal } from './components/document-detail-modal';
 export { DocumentHistoryList } from './components/document-history-list';
 export { DocumentListScreen } from './components/document-list-screen';
+export { DocumentPreviewModal } from './components/document-preview-modal';
 export { ExportReportMenu } from './components/export-report-menu';
 export { VersionListPanel } from './components/version-list-panel';
 export { DocumentStatusBadge } from './components/document-status-badge';
@@ -42,3 +43,4 @@ export {
   validateFile,
   type UploadItem,
 } from './services/upload-queue.service';
+export { previewKindOf, type PreviewKind } from './services/preview.service';

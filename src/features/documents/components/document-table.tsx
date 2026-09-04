@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, FileText, Trash2 } from 'lucide-react';
+import { Download, Eye, FileText, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
@@ -26,6 +26,7 @@ import { formatBytes, matchesFormat } from '../services/upload-queue.service';
 import type { DocumentFormat, DocumentStatus } from '../schemas/document.schema';
 
 import { DocumentDetailModal } from './document-detail-modal';
+import { DocumentPreviewModal } from './document-preview-modal';
 import { DocumentStatusBadge } from './document-status-badge';
 
 const PAGE_SIZE = 6;
@@ -58,6 +59,8 @@ export function DocumentTable({
   const [page, setPage] = useState(1);
   /** Which row's detail modal is open, and which of its tabs. */
   const [opened, setOpened] = useState<{ id: string; tab: 'info' | 'history' } | null>(null);
+  /** Which row's file is being previewed. */
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -203,6 +206,15 @@ export function DocumentTable({
                         so the browser saves it correctly on its own. Disabled
                         until the row knows its revision — every per-file action
                         addresses the revision, not the document. */}
+                    {/* Preview before download: reading the file is the common
+                        intent, saving it the exception. */}
+                    <IconButton
+                      icon={Eye}
+                      size="sm"
+                      label={t('preview.open')}
+                      disabled={!document.revisionId}
+                      onClick={() => setPreviewId(document.id)}
+                    />
                     {document.revisionId ? (
                       <a
                         href={documentsApi.downloadUrl(projectId, document.id, document.revisionId)}
@@ -234,6 +246,12 @@ export function DocumentTable({
             ))}
         </tbody>
       </DataTable>
+
+      <DocumentPreviewModal
+        projectId={projectId}
+        document={(documents ?? []).find((item) => item.id === previewId) ?? null}
+        onClose={() => setPreviewId(null)}
+      />
 
       <DocumentDetailModal
         projectId={projectId}

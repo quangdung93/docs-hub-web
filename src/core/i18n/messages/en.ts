@@ -253,6 +253,13 @@ export const en: Record<MessageKey, string> = {
   'documentDetail.notAvailable': 'Not provided by the backend',
   'documentDetail.open': 'View document details',
 
+  'preview.title': 'View document',
+  'preview.open': 'View document',
+  'preview.unsupported': 'Your browser cannot display {format} files inline.',
+  'preview.unsupportedHint': 'Download the file to open it in the matching app.',
+  'preview.loadFailed': 'Could not load the file.',
+  'preview.openInTab': 'Open in a new tab',
+
   // ── Document change history ──────────────────────────────────────────────
   'history.tab': 'Change history',
   'history.documentsTab': 'Documents',
@@ -278,6 +285,9 @@ export const en: Record<MessageKey, string> = {
   'reports.scopeOption': 'Whole project · version {label}',
   'reports.format': 'Export format',
   'reports.export': 'Export file',
+  'reports.exporting': 'Exporting…',
+  'reports.exportFailed': 'Could not export the report.',
+  'reports.pdfComingSoon': 'Only Excel (.xlsx) export is available for now.',
   'reports.exportConfirm': 'Export the UAT Report for "{label}" as {format}?',
   'reports.noVersion': 'This project has no version to report on yet.',
 

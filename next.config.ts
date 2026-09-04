@@ -23,6 +23,10 @@ const cspDirectives = [
   "font-src 'self'",
   "connect-src 'self'",
   "object-src 'none'",
+  // The document viewer frames revision files from our own BFF path. Without
+  // this it falls back to `default-src`, which is 'self' and would work — but
+  // being explicit keeps the viewer from breaking if default-src ever narrows.
+  "frame-src 'self' blob:",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
@@ -68,7 +72,25 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/:path*',
+        // The document viewer embeds revision files in an <iframe>. They are
+        // served from this same origin, but a blanket `X-Frame-Options: DENY`
+        // applies to every response — including those files — so Chrome refuses
+        // to render them and shows a broken-plugin box instead.
+        //
+        // Narrowed to SAMEORIGIN for the proxied API only: still no third-party
+        // framing, and `frame-ancestors 'none'` in the CSP keeps the app's own
+        // pages unframeable regardless, which is the clickjacking concern.
+        source: '/api/:path*',
+        headers: securityHeaders.map((header) =>
+          header.key === 'X-Frame-Options' ? { ...header, value: 'SAMEORIGIN' } : header
+        ),
+      },
+      {
+        // Everything except /api, which is matched above. Next merges matching
+        // header rules rather than letting the first one win, so a blanket
+        // `/:path*` here would re-add `X-Frame-Options: DENY` to the API
+        // responses and undo the rule above.
+        source: '/((?!api/).*)',
         headers: securityHeaders,
       },
     ];

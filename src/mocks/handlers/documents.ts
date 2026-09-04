@@ -192,6 +192,8 @@ export const documentHandlers = [
       // revision can report a correct media type (a title carries no extension).
       name: String(form.get('title') ?? name),
       fileName: name,
+      mediaType:
+        file instanceof File ? file.type || 'application/octet-stream' : 'application/octet-stream',
       format: name.split('.').pop()?.toUpperCase() ?? '—',
       sizeBytes: file instanceof File ? file.size : 0,
       chunkCount: null,

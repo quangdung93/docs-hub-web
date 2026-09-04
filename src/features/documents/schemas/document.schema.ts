@@ -48,6 +48,8 @@ export const DocumentSchema = z.object({
    * and the format filter key off this.
    */
   fileName: z.string().nullable(),
+  /** Raw media type of the newest revision — decides what can be previewed. */
+  mediaType: z.string().nullable(),
   /** Optimistic-locking counter; PATCH must echo the value it last read. */
   version: z.number().int(),
   /**

@@ -187,6 +187,23 @@ export const documentsApi = {
 
   viewUrl: (projectId: string, documentId: string, revisionId: string): string =>
     `${API_BASE}${endpoints.documents.revisionView(projectId, documentId, revisionId)}`,
+
+  /**
+   * Export the UAT report. Returns the .xlsx bytes, not a URL — the endpoint is
+   * a POST, so it cannot be an `<a href>` the way download and view are.
+   *
+   * `project_version_id` narrows the scope; omitting it exports the whole
+   * project. A scope with no documents is a 400 with a readable message, which
+   * the caller surfaces rather than swallowing.
+   */
+  exportUatReport: async (projectId: string, projectVersionId?: string): Promise<Blob> => {
+    const { data } = await http.post(
+      endpoints.documents.uatReport(projectId),
+      projectVersionId ? { project_version_id: projectVersionId } : {},
+      { responseType: 'blob' }
+    );
+    return data as Blob;
+  },
 };
 
 /**

@@ -13,8 +13,17 @@ import {
 } from 'lucide-react';
 
 import { useI18n } from '@/core/i18n';
-import { Button, Modal, PendingActionDialogs, Select, usePendingAction } from '@/shared/ui';
+import {
+  Button,
+  Modal,
+  PendingActionDialogs,
+  Select,
+  showErrorToast,
+  usePendingAction,
+} from '@/shared/ui';
+import { messageOf } from '@/shared/ui';
 
+import { documentsApi } from '../api/documents.api';
 import { useProjectVersions } from '../hooks/use-documents';
 
 /**
@@ -25,11 +34,13 @@ import { useProjectVersions } from '../hooks/use-documents';
  * arrives. Only UAT Report is selectable; the other two are listed as coming so
  * the shape of the feature is visible without pretending they work.
  *
- * The export itself is not wired: docs-hub-api has no export endpoint at all
- * (`/exports`, `/reports`, `/uat-report` and `/templates` all 404, verified
- * 28/08/2026). Confirming the dialog says so plainly instead of producing an
- * empty file. The version and format the user picked are already collected, so
- * connecting a real endpoint is a one-function change.
+ * UAT Report is wired to `POST .../documents/uat-report`, which the backend
+ * shipped on 04/09/2026 and which returns .xlsx bytes. The other two have no
+ * endpoint yet and say so rather than producing an empty file.
+ *
+ * PDF is offered in the format picker but the endpoint only emits .xlsx, so
+ * picking it is reported as not-yet-available instead of silently handing over
+ * a spreadsheet named .pdf.
  */
 const REPORT_FORMATS = ['xlsx', 'pdf'] as const;
 type ReportFormat = (typeof REPORT_FORMATS)[number];
@@ -40,6 +51,7 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const pending = usePendingAction();
   const [versionId, setVersionId] = useState<string | undefined>();
   const [format, setFormat] = useState<ReportFormat>('xlsx');
@@ -65,6 +77,41 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
 
   const ordered = [...(versions ?? [])].sort((a, b) => b.sequence_no - a.sequence_no);
   const selectedVersion = versionId ?? ordered[0]?.id;
+
+  /**
+   * Fetch the report and hand it to the browser as a download.
+   *
+   * A blob URL rather than a link to the endpoint: it is a POST, so it cannot
+   * be an `<a href>`. The URL is revoked immediately after the click — leaving
+   * it alive pins the whole file in memory for the life of the tab.
+   */
+  const runExport = async () => {
+    if (format !== 'xlsx') {
+      // The endpoint emits .xlsx only. Saying so beats renaming a spreadsheet.
+      setModalOpen(false);
+      pending.request(t('reports.modalTitle'), t('reports.pdfComingSoon'));
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const blob = await documentsApi.exportUatReport(projectId, selectedVersion);
+      const label = ordered.find((version) => version.id === selectedVersion)?.label ?? 'export';
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `UAT_Report_${label}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setModalOpen(false);
+    } catch (error) {
+      // The backend's own words — "Không có tài liệu nào trong phạm vi đã chọn"
+      // tells the user what to change; a generic failure does not.
+      showErrorToast(messageOf(error, t('reports.exportFailed')));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const openModal = () => {
     setMenuOpen(false);
@@ -118,24 +165,9 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
             <Button variant="outline" onClick={() => setModalOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button
-              disabled={!selectedVersion}
-              onClick={() => {
-                setModalOpen(false);
-                // The picked version and format are already known here; only the
-                // request is missing, so this is the one line that changes when
-                // an export endpoint lands.
-                pending.request(
-                  t('reports.modalTitle'),
-                  t('reports.exportConfirm', {
-                    label: ordered.find((v) => v.id === selectedVersion)?.label ?? '',
-                    format: format === 'xlsx' ? 'Excel (.xlsx)' : 'PDF',
-                  })
-                );
-              }}
-            >
+            <Button disabled={!selectedVersion || isExporting} onClick={() => void runExport()}>
               <Download aria-hidden />
-              {t('reports.export')}
+              {isExporting ? t('reports.exporting') : t('reports.export')}
             </Button>
           </>
         }
