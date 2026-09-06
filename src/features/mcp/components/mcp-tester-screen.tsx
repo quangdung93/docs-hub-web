@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { CheckCircle2, Plug, XCircle } from 'lucide-react';
 
 import { useI18n } from '@/core/i18n';
@@ -32,8 +32,21 @@ export function McpTesterScreen() {
   const { t } = useI18n();
   const { steps, tools, sessionId, isRunning, run, callTool } = useMcpProbe();
 
-  const [url, setUrl] = useState(() => readStored('url') ?? DEFAULT_URL);
-  const [name, setName] = useState(() => readStored('name') ?? DEFAULT_NAME);
+  // Read through `useSyncExternalStore`, which is built for exactly this: it
+  // uses the server snapshot for the initial render and swaps to the client one
+  // after hydration, so the two trees never disagree.
+  //
+  // Seeding `useState` from localStorage instead makes the client's first paint
+  // differ from the server's; React discards the tree and remounts it, dropping
+  // every event handler — the Connect button then silently does nothing. Only
+  // visible in a production build, where a hydration mismatch is not fatal.
+  const stored = useSyncExternalStore(subscribeToStorage, readStoredForm, readServerForm);
+  // What the user has typed this session, layered over the stored value.
+  const [edited, setEdited] = useState<{ url?: string; name?: string }>({});
+  const url = edited.url ?? stored.url;
+  const name = edited.name ?? stored.name;
+  const setUrl = (value: string) => setEdited((form) => ({ ...form, url: value }));
+  const setName = (value: string) => setEdited((form) => ({ ...form, name: value }));
   const [token, setToken] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
 
@@ -224,15 +237,45 @@ export function McpTesterScreen() {
   );
 }
 
-/** Lazy read of a persisted field; absent or corrupt storage falls back. */
-function readStored(field: 'url' | 'name'): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return typeof parsed[field] === 'string' ? (parsed[field] as string) : null;
-  } catch {
-    return null;
+/**
+ * `localStorage` as an external store.
+ *
+ * The snapshot is cached and only rebuilt when the underlying string changes —
+ * returning a fresh object each call would make `useSyncExternalStore` loop
+ * forever, since it compares snapshots by identity.
+ */
+const SERVER_FORM = { url: DEFAULT_URL, name: DEFAULT_NAME };
+
+let cachedRaw: string | null = null;
+let cachedForm = SERVER_FORM;
+
+function readStoredForm(): { url: string; name: string } {
+  const raw = window.localStorage.getItem(STORAGE_KEY);
+  if (raw === cachedRaw) return cachedForm;
+
+  cachedRaw = raw;
+  cachedForm = SERVER_FORM;
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      cachedForm = {
+        url: typeof parsed.url === 'string' ? parsed.url : DEFAULT_URL,
+        name: typeof parsed.name === 'string' ? parsed.name : DEFAULT_NAME,
+      };
+    } catch {
+      // Corrupt storage falls back to the defaults rather than breaking the page.
+    }
   }
+  return cachedForm;
+}
+
+/** The server has no storage, so it always renders the defaults. */
+function readServerForm() {
+  return SERVER_FORM;
+}
+
+/** Only another tab can change this; `storage` fires for exactly that case. */
+function subscribeToStorage(onChange: () => void) {
+  window.addEventListener('storage', onChange);
+  return () => window.removeEventListener('storage', onChange);
 }
