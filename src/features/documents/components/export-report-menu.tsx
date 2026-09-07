@@ -81,11 +81,11 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
 
     setIsExporting(true);
     try {
-      const blob = await documentsApi.exportUatReport(projectId);
+      const { blob, fileName } = await documentsApi.exportUatReport(projectId);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'UAT_Report.xlsx';
+      link.download = fileName;
       link.click();
       URL.revokeObjectURL(url);
       setModalOpen(false);

@@ -196,15 +196,47 @@ export const documentsApi = {
    * the scope to nothing useful — a version holding no documents answers 400
    * rather than an empty report — so the caller no longer sends one.
    */
-  exportUatReport: async (projectId: string): Promise<Blob> => {
-    const { data } = await http.post(
+  exportUatReport: async (projectId: string): Promise<{ blob: Blob; fileName: string }> => {
+    const response = await http.post(
       endpoints.documents.uatReport(projectId),
       {},
       { responseType: 'blob' }
     );
-    return data as Blob;
+
+    // The backend names the file itself — `UAT_Report_DOCS-HUB-DEMO_all.xlsx`,
+    // carrying the project key and the scope. Keeping that beats a fixed name,
+    // which would collide the moment someone exports two projects.
+    return {
+      blob: response.data as Blob,
+      fileName: fileNameFrom(response.headers['content-disposition']) ?? 'UAT_Report.xlsx',
+    };
   },
 };
+
+/**
+ * Pull the filename out of a `Content-Disposition` header.
+ *
+ * Handles the RFC 5987 `filename*=UTF-8''…` form first, because that is the one
+ * that survives non-ASCII names; a project keyed in Vietnamese would otherwise
+ * arrive mangled. Falls back to plain `filename=`, quoted or not.
+ *
+ * Returns null rather than guessing, so the caller decides the default.
+ */
+export function fileNameFrom(header: unknown): string | null {
+  if (typeof header !== 'string') return null;
+
+  const encoded = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(header);
+  if (encoded?.[1]) {
+    try {
+      return decodeURIComponent(encoded[1].trim().replace(/^"|"$/g, ''));
+    } catch {
+      // A malformed escape sequence falls through to the plain form below.
+    }
+  }
+
+  const plain = /filename="?([^";]+)"?/i.exec(header);
+  return plain?.[1]?.trim() || null;
+}
 
 /**
  * Project versions. Uploads are scoped to one, so the upload screen has to be
