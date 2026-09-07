@@ -183,6 +183,7 @@ export const vi = {
   'upload.dropzone.browse': 'bấm để chọn tệp',
   'upload.dropzone.fromDevice': 'từ máy',
   'upload.dropzone.hint': 'PDF · DOCX · XLSX · CSV · TXT · Markdown — tối đa 20 MB / tệp',
+  'upload.dropzone.needVersion': 'Nhập tên phiên bản ở trên trước khi tải tệp lên.',
   'upload.queue.title': 'Hàng đợi xử lý',
   'upload.queue.progress': '{done}/{total} hoàn tất',
   'upload.queue.empty': 'Chưa có tệp nào trong hàng đợi.',
@@ -272,6 +273,10 @@ export const vi = {
   'history.revision': 'Bản {no}',
   'history.uploadedBy': 'Tải lên bởi {name}',
   'history.unknownUser': 'Không rõ',
+  'history.action.added': 'Thêm mới',
+  'history.action.updated': 'Cập nhật',
+  'history.deletedNote':
+    'Tài liệu đã xóa không hiển thị ở đây — backend xóa hẳn, không lưu dấu vết.',
 
   // ── Xuất báo cáo ─────────────────────────────────────────────────────────
   'reports.button': 'Xuất báo cáo',

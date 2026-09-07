@@ -36,6 +36,7 @@ export function UploadPanel({
     selectVersion,
     addVersion,
     isAddingVersion,
+    canUpload,
   } = useUploadQueue(projectId);
 
   // Above the dropzone on purpose: an upload with no version is refused, so the
@@ -60,6 +61,12 @@ export function UploadPanel({
       browseLabel={t('upload.dropzone.browse')}
       fromDeviceLabel={t('upload.dropzone.fromDevice')}
       hint={t('upload.dropzone.hint')}
+      // Blocked until a version exists. The upload would be refused anyway —
+      // scope is required — but failing a row after the file is already in the
+      // queue tells the user too late, and reads as a bug rather than a
+      // missing input.
+      disabled={!canUpload}
+      disabledHint={t('upload.dropzone.needVersion')}
       className={layout === 'split' ? 'min-h-[280px]' : 'min-h-[220px]'}
     />
   );

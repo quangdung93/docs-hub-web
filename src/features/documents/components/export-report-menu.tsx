@@ -1,60 +1,50 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  ChevronDown,
-  ClipboardList,
-  Download,
-  FileCheck2,
-  FileOutput,
-  GitBranch,
-  GitCompareArrows,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChevronDown, Download, FileCheck2, FileOutput } from 'lucide-react';
 
 import { useI18n } from '@/core/i18n';
 import {
   Button,
+  messageOf,
   Modal,
   PendingActionDialogs,
-  Select,
   showErrorToast,
   usePendingAction,
 } from '@/shared/ui';
-import { messageOf } from '@/shared/ui';
 
 import { documentsApi } from '../api/documents.api';
-import { useProjectVersions } from '../hooks/use-documents';
 
 /**
- * "Xuất báo cáo" — a menu, not a single button.
+ * "Xuất báo cáo" — a menu rather than a single button, because more report
+ * types are planned and the entry point should not need redesigning when the
+ * second one arrives.
  *
- * There will be several report types, so the entry point is a list from the
- * start rather than one button that has to be redesigned when the second type
- * arrives. Only UAT Report is selectable; the other two are listed as coming so
- * the shape of the feature is visible without pretending they work.
+ * Only UAT Report is listed. Project Planning and Testcase are specified but
+ * have no endpoint: `POST .../documents/uat-report` is the only export the
+ * backend exposes, and it ignores a `type` field — sending `type: "planning"`
+ * returns the identical UAT workbook, byte for byte (verified 07/09/2026).
+ * Listing them would either lie about what the file is or show two permanently
+ * dead rows, so they are absent until there is something to call.
  *
- * UAT Report is wired to `POST .../documents/uat-report`, which the backend
- * shipped on 04/09/2026 and which returns .xlsx bytes. The other two have no
- * endpoint yet and say so rather than producing an empty file.
+ * The export covers the whole project. There is no version selector because the
+ * endpoint takes no scope that changes the output, and offering a choice that
+ * does nothing is worse than not offering one.
  *
- * PDF is offered in the format picker but the endpoint only emits .xlsx, so
- * picking it is reported as not-yet-available instead of silently handing over
- * a spreadsheet named .pdf.
+ * PDF is offered as a format but the endpoint only emits .xlsx, so choosing it
+ * reports that rather than handing over a spreadsheet named .pdf.
  */
 const REPORT_FORMATS = ['xlsx', 'pdf'] as const;
 type ReportFormat = (typeof REPORT_FORMATS)[number];
 
 export function ExportReportMenu({ projectId }: { projectId: string }) {
   const { t } = useI18n();
-  const { data: versions } = useProjectVersions(projectId);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const pending = usePendingAction();
-  const [versionId, setVersionId] = useState<string | undefined>();
   const [format, setFormat] = useState<ReportFormat>('xlsx');
+  const pending = usePendingAction();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close on an outside click or Escape. Scoped to the container so a click
@@ -75,9 +65,6 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
     };
   }, [menuOpen]);
 
-  const ordered = [...(versions ?? [])].sort((a, b) => b.sequence_no - a.sequence_no);
-  const selectedVersion = versionId ?? ordered[0]?.id;
-
   /**
    * Fetch the report and hand it to the browser as a download.
    *
@@ -87,7 +74,6 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
    */
   const runExport = async () => {
     if (format !== 'xlsx') {
-      // The endpoint emits .xlsx only. Saying so beats renaming a spreadsheet.
       setModalOpen(false);
       pending.request(t('reports.modalTitle'), t('reports.pdfComingSoon'));
       return;
@@ -95,12 +81,11 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
 
     setIsExporting(true);
     try {
-      const blob = await documentsApi.exportUatReport(projectId, selectedVersion);
-      const label = ordered.find((version) => version.id === selectedVersion)?.label ?? 'export';
+      const blob = await documentsApi.exportUatReport(projectId);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `UAT_Report_${label}.xlsx`;
+      link.download = 'UAT_Report.xlsx';
       link.click();
       URL.revokeObjectURL(url);
       setModalOpen(false);
@@ -111,12 +96,6 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
     } finally {
       setIsExporting(false);
     }
-  };
-
-  const openModal = () => {
-    setMenuOpen(false);
-    setVersionId(ordered[0]?.id);
-    setModalOpen(true);
   };
 
   return (
@@ -136,22 +115,21 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
             {t('reports.menuTitle')}
           </p>
 
-          <ReportOption
-            icon={FileCheck2}
-            title={t('reports.uat')}
-            hint={t('reports.uatHint')}
-            onClick={openModal}
-          />
-          <ReportOption
-            icon={GitCompareArrows}
-            title={t('reports.rtm')}
-            hint={t('reports.comingSoon')}
-          />
-          <ReportOption
-            icon={ClipboardList}
-            title={t('reports.tsr')}
-            hint={t('reports.comingSoon')}
-          />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setMenuOpen(false);
+              setModalOpen(true);
+            }}
+            className="hover:bg-accent flex w-full items-start gap-2.5 rounded-md px-2 py-2 text-left transition-colors"
+          >
+            <FileCheck2 className="text-brand mt-0.5 size-4" aria-hidden />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium">{t('reports.uat')}</span>
+              <span className="text-muted-foreground block text-xs">{t('reports.uatHint')}</span>
+            </span>
+          </button>
         </div>
       )}
 
@@ -165,7 +143,7 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
             <Button variant="outline" onClick={() => setModalOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button disabled={!selectedVersion || isExporting} onClick={() => void runExport()}>
+            <Button disabled={isExporting} onClick={() => void runExport()}>
               <Download aria-hidden />
               {isExporting ? t('reports.exporting') : t('reports.export')}
             </Button>
@@ -174,43 +152,20 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
       >
         <p className="text-muted-foreground">{t('reports.modalDescription')}</p>
 
-        <div className="mt-4 space-y-4">
-          {ordered.length === 0 ? (
-            <p className="text-status-queued text-sm">{t('reports.noVersion')}</p>
-          ) : (
-            <div>
-              <Select
-                value={selectedVersion ?? ''}
-                onValueChange={setVersionId}
-                options={ordered.map((version) => ({
-                  value: version.id,
-                  label: t('reports.scopeOption', { label: version.label }),
-                }))}
-                label={t('reports.scope')}
-                icon={GitBranch}
-                className="w-full"
-              />
-              <p className="text-muted-foreground mt-1 text-xs">{t('reports.scopeHint')}</p>
-            </div>
-          )}
-
-          <div>
-            <p className="text-muted-foreground mb-1.5 text-xs font-medium">
-              {t('reports.format')}
-            </p>
-            <div className="flex gap-2">
-              {REPORT_FORMATS.map((value) => (
-                <Button
-                  key={value}
-                  type="button"
-                  variant={format === value ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={() => setFormat(value)}
-                >
-                  {value === 'xlsx' ? 'Excel (.xlsx)' : 'PDF'}
-                </Button>
-              ))}
-            </div>
+        <div className="mt-4">
+          <p className="text-muted-foreground mb-1.5 text-xs font-medium">{t('reports.format')}</p>
+          <div className="flex gap-2">
+            {REPORT_FORMATS.map((value) => (
+              <Button
+                key={value}
+                type="button"
+                variant={format === value ? 'default' : 'outline'}
+                className="flex-1"
+                onClick={() => setFormat(value)}
+              >
+                {value === 'xlsx' ? 'Excel (.xlsx)' : 'PDF'}
+              </Button>
+            ))}
           </div>
         </div>
       </Modal>
@@ -223,37 +178,5 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
         noticeDescription={t('common.comingSoon')}
       />
     </div>
-  );
-}
-
-/** A row in the report-type menu; without `onClick` it renders as coming soon. */
-function ReportOption({
-  icon: Icon,
-  title,
-  hint,
-  onClick,
-}: {
-  icon: LucideIcon;
-  title: string;
-  hint: string;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={!onClick}
-      onClick={onClick}
-      className="hover:bg-accent flex w-full items-start gap-2.5 rounded-md px-2 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
-    >
-      <Icon
-        className={onClick ? 'text-brand mt-0.5 size-4' : 'text-muted-foreground mt-0.5 size-4'}
-        aria-hidden
-      />
-      <span className="min-w-0">
-        <span className="block text-sm font-medium">{title}</span>
-        <span className="text-muted-foreground block text-xs">{hint}</span>
-      </span>
-    </button>
   );
 }

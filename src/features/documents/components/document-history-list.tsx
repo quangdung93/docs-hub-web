@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
 import { formatRelativeTime } from '@/shared/lib/format';
-import { ErrorState, FileTypeIcon, Skeleton } from '@/shared/ui';
+import { Badge, ErrorState, FileTypeIcon, Skeleton } from '@/shared/ui';
 
 import { useDocuments, useVersionLabels } from '../hooks/use-documents';
 import { formatBytes } from '../services/upload-queue.service';
@@ -21,9 +21,16 @@ import { DocumentStatusBadge } from './document-status-badge';
  * — it is a different view of data the table has already paid for.
  *
  * There is no history endpoint to use instead: `/projects/{id}/activities`,
- * `/audit-logs` and `/history` all 404 (verified 28/08/2026). The consequence is
- * that this shows document uploads only, not renames, deletions or membership
- * changes — those leave no trace the client can read.
+ * `/audit-logs` and `/history` all 404 (verified 28/08/2026).
+ *
+ * Each entry is labelled Thêm mới or Cập nhật, derived from the revision number:
+ * revision 1 created the document, anything above it replaced the file.
+ *
+ * Deletions cannot be shown. `DELETE /documents/{id}` removes the row outright —
+ * it leaves the list, and fetching it by id answers 404 (verified 07/09/2026) —
+ * so a deleted document leaves nothing for the client to read. The note at the
+ * foot of the list says so, because a history that silently omits deletions
+ * reads as complete when it is not.
  */
 export function DocumentHistoryList({ projectId }: { projectId: string }) {
   const { t, locale } = useI18n();
@@ -39,6 +46,9 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
             ...revision,
             documentId: document.id,
             documentName: document.name,
+            // Revision 1 is the upload that created the document; later ones
+            // replaced its file.
+            isFirst: revision.revisionNo === 1,
             // The newest revision of a document is the one the table shows.
             isCurrent: revision.id === document.revisionId,
           }))
@@ -90,10 +100,17 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
             <div className="flex min-w-0 items-center gap-2.5">
               <FileTypeIcon fileName={entry.fileName} />
               <div className="min-w-0 leading-tight">
-                <div className="truncate text-sm font-medium">
-                  {entry.documentName}{' '}
+                <div className="flex items-center gap-2">
+                  {/* Revision 1 created the document; anything above replaced
+                      its file. Deletions cannot appear — see the note below. */}
+                  <Badge variant={entry.isFirst ? 'indexed' : 'brand'} className="shrink-0">
+                    {entry.isFirst ? t('history.action.added') : t('history.action.updated')}
+                  </Badge>
+                  <span className="truncate text-sm font-medium">{entry.documentName}</span>
+                </div>
+                <div className="text-muted-foreground truncate text-xs">
                   <span className="text-muted-foreground font-normal">
-                    · {t('history.revision', { no: entry.revisionNo })}
+                    {t('history.revision', { no: entry.revisionNo })}
                   </span>
                 </div>
                 <div className="text-muted-foreground mt-0.5 text-xs">
@@ -109,6 +126,10 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
           </button>
         );
       })}
+
+      {/* Says what the list cannot show, so its silence is not read as "nothing
+          was ever deleted". */}
+      <p className="text-muted-foreground pt-1 text-xs italic">{t('history.deletedNote')}</p>
 
       <DocumentDetailModal
         projectId={projectId}

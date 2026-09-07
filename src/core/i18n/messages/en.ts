@@ -180,6 +180,7 @@ export const en: Record<MessageKey, string> = {
   'upload.dropzone.browse': 'browse to select files',
   'upload.dropzone.fromDevice': 'from your device',
   'upload.dropzone.hint': 'PDF · DOCX · XLSX · CSV · TXT · Markdown — max 20 MB per file',
+  'upload.dropzone.needVersion': 'Name a version above before uploading files.',
   'upload.queue.title': 'Processing queue',
   'upload.queue.progress': '{done}/{total} complete',
   'upload.queue.empty': 'No files in the queue yet.',
@@ -268,6 +269,10 @@ export const en: Record<MessageKey, string> = {
   'history.revision': 'Rev {no}',
   'history.uploadedBy': 'Uploaded by {name}',
   'history.unknownUser': 'Unknown',
+  'history.action.added': 'Added',
+  'history.action.updated': 'Updated',
+  'history.deletedNote':
+    'Deleted documents do not appear here — the backend removes them outright, leaving no record.',
 
   // ── Report export ────────────────────────────────────────────────────────
   'reports.button': 'Export report',
