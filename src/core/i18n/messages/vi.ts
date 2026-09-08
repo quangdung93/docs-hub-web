@@ -231,6 +231,11 @@ export const vi = {
   'versions.status.released': 'Đã phát hành',
   'versions.filterAll': 'Tất cả phiên bản',
   'versions.filterLabel': 'Phiên bản',
+  'versions.pillLatest': 'mới nhất',
+  'versions.pickerTitle': 'Phiên bản dự án',
+  'versions.readOnlyBanner': 'Đang xem phiên bản {label} · chế độ chỉ đọc.',
+  'versions.backToLatest': 'Quay lại mới nhất',
+  'versions.readOnlyUpload': 'Chuyển về phiên bản mới nhất để tải tài liệu lên.',
 
   'versions.restore': 'Khôi phục phiên bản này',
   'versions.restoreConfirm':

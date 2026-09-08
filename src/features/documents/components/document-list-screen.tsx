@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, CircleDot, Filter, GitBranch, Plus } from 'lucide-react';
+import { ArrowLeft, CircleDot, Filter, History, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -11,16 +11,18 @@ import { ProjectAvatar, useProject } from '@/features/projects';
 import { projectRoutes } from '@/features/projects/routes';
 import { Button, IconButton, SearchInput, Select, Tabs } from '@/shared/ui';
 
-import { useVersionLabels } from '../hooks/use-documents';
+import { useCreateProjectVersion, useVersionLabels } from '../hooks/use-documents';
 import {
   DOCUMENT_FORMAT_VALUES,
   type DocumentFormat,
   type DocumentStatus,
 } from '../schemas/document.schema';
 
+import { CreateVersionModal } from './create-version-modal';
 import { DocumentHistoryList } from './document-history-list';
 import { DocumentTable } from './document-table';
 import { ExportReportMenu } from './export-report-menu';
+import { VersionPickerPill } from './version-picker-pill';
 
 const STATUS_VALUES = ['indexed', 'processing', 'queued', 'failed'] as const;
 
@@ -40,7 +42,10 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
   const [search, setSearch] = useState('');
   const [formatFilter, setFormatFilter] = useState<DocumentFormat | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
-  const [versionFilter, setVersionFilter] = useState<string>('all');
+  /** Which snapshot the list shows. Null means the newest, the only editable one. */
+  const [viewingVersion, setViewingVersion] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const createVersion = useCreateProjectVersion(projectId);
 
   const formatOptions = [
     { value: 'all' as const, label: t('documents.filter.allFormats') },
@@ -55,13 +60,14 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
     ...STATUS_VALUES.map((value) => ({ value, label: t(`docStatus.${value}`) })),
   ];
 
-  // Newest version first, matching how the settings tab lists them.
-  const versionOptions = [
-    { value: 'all', label: t('versions.filterAll') },
-    ...[...versions]
-      .sort((a, b) => b.sequence_no - a.sequence_no)
-      .map((version) => ({ value: version.id, label: version.label })),
-  ];
+  // Newest first, so `[0]` is the current version everywhere below.
+  const orderedVersions = [...versions].sort((a, b) => b.sequence_no - a.sequence_no);
+
+  // Older snapshots are read-only: an upload always lands in a draft version,
+  // so offering the button while viewing history would either fail or write to
+  // a version the user is not looking at.
+  const isReadOnly = viewingVersion !== null && viewingVersion !== orderedVersions[0]?.id;
+  const viewedLabel = orderedVersions.find((version) => version.id === viewingVersion)?.label;
 
   return (
     <main className="flex-1 p-6">
@@ -78,24 +84,54 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
           />
           <div>
             <h1 className="text-lg font-semibold tracking-tight">{t('documents.title')}</h1>
-            <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-sm">
-              <ProjectAvatar imageUrl={project?.imageUrl} size="sm" />
-              {project?.name}
-              {project && ` · ${t('documents.count', { count: orUnknown(project.documentCount) })}`}
-            </p>
+            <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-sm">
+              <span className="flex items-center gap-1.5">
+                <ProjectAvatar imageUrl={project?.imageUrl} size="sm" />
+                {project?.name}
+                {project &&
+                  ` · ${t('documents.count', { count: orUnknown(project.documentCount) })}`}
+              </span>
+              <VersionPickerPill
+                versions={orderedVersions}
+                value={viewingVersion}
+                onChange={setViewingVersion}
+                onCreate={() => setCreateOpen(true)}
+              />
+            </div>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <ExportReportMenu projectId={projectId} />
-          <Button asChild>
-            <Link href={projectRoutes.upload(projectId)}>
+          {isReadOnly ? (
+            <Button disabled title={t('versions.readOnlyUpload')}>
               <Plus aria-hidden />
               {t('documents.upload')}
-            </Link>
-          </Button>
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href={projectRoutes.upload(projectId)}>
+                <Plus aria-hidden />
+                {t('documents.upload')}
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Says plainly that this is a past snapshot. Without it the disabled
+          upload button and the shorter list read as bugs. */}
+      {isReadOnly && (
+        <div className="border-status-queued/40 bg-status-queued-bg/60 text-status-queued mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-sm">
+          <span className="flex items-center gap-2">
+            <History className="size-4 shrink-0" aria-hidden />
+            {t('versions.readOnlyBanner', { label: viewedLabel ?? '' })}
+          </span>
+          <Button variant="outline" size="sm" onClick={() => setViewingVersion(null)}>
+            {t('versions.backToLatest')}
+          </Button>
+        </div>
+      )}
 
       <Tabs
         className="mt-4 px-0"
@@ -133,17 +169,6 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
               label={t('documents.filter.statusLabel')}
               icon={CircleDot}
             />
-
-            {/* Always shown, even for a single-version project: which version a
-                document belongs to is the point of the screen, so hiding the
-                control made it look like versions were not tracked at all. */}
-            <Select
-              value={versionFilter}
-              onValueChange={setVersionFilter}
-              options={versionOptions}
-              label={t('versions.filterLabel')}
-              icon={GitBranch}
-            />
           </div>
 
           <DocumentTable
@@ -151,7 +176,10 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
             search={search}
             formatFilter={formatFilter}
             statusFilter={statusFilter}
-            versionFilter={versionFilter}
+            // Driven by the pill in the header, which replaced a duplicate
+            // dropdown here — two controls for one thing meant changing the
+            // wrong one had no visible effect.
+            versionFilter={viewingVersion ?? 'all'}
           />
         </>
       ) : (
@@ -159,6 +187,13 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
           <DocumentHistoryList projectId={projectId} />
         </div>
       )}
+
+      <CreateVersionModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreate={(label, note) => createVersion.mutateAsync({ label, note })}
+        isPending={createVersion.isPending}
+      />
     </main>
   );
 }

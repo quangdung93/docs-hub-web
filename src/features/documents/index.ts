@@ -5,6 +5,7 @@ export { DocumentListScreen } from './components/document-list-screen';
 export { DocumentPreviewModal } from './components/document-preview-modal';
 export { ExportReportMenu } from './components/export-report-menu';
 export { VersionListPanel } from './components/version-list-panel';
+export { VersionPickerPill } from './components/version-picker-pill';
 export { DocumentStatusBadge } from './components/document-status-badge';
 export { DocumentTable } from './components/document-table';
 export { UploadPanel } from './components/upload-panel';

@@ -228,6 +228,11 @@ export const en: Record<MessageKey, string> = {
   'versions.status.released': 'Released',
   'versions.filterAll': 'All versions',
   'versions.filterLabel': 'Version',
+  'versions.pillLatest': 'latest',
+  'versions.pickerTitle': 'Project version',
+  'versions.readOnlyBanner': 'Viewing {label} · read-only.',
+  'versions.backToLatest': 'Back to latest',
+  'versions.readOnlyUpload': 'Switch back to the latest version to upload.',
 
   'versions.restore': 'Restore this version',
   'versions.restoreConfirm':
