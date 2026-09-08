@@ -134,17 +134,16 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
               icon={CircleDot}
             />
 
-            {/* Only worth showing once a project has more than one version —
-                a single-version project has nothing to choose between. */}
-            {versions.length > 1 && (
-              <Select
-                value={versionFilter}
-                onValueChange={setVersionFilter}
-                options={versionOptions}
-                label={t('versions.filterLabel')}
-                icon={GitBranch}
-              />
-            )}
+            {/* Always shown, even for a single-version project: which version a
+                document belongs to is the point of the screen, so hiding the
+                control made it look like versions were not tracked at all. */}
+            <Select
+              value={versionFilter}
+              onValueChange={setVersionFilter}
+              options={versionOptions}
+              label={t('versions.filterLabel')}
+              icon={GitBranch}
+            />
           </div>
 
           <DocumentTable

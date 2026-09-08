@@ -7,7 +7,7 @@ import { useI18n } from '@/core/i18n';
 import { Button, Modal } from '@/shared/ui';
 
 import { documentsApi } from '../api/documents.api';
-import { previewKindOf } from '../services/preview.service';
+import { previewKindOf, sanitizeHrefs } from '../services/preview.service';
 import { type Document } from '../schemas/document.schema';
 
 /**
@@ -19,9 +19,11 @@ import { type Document } from '../schemas/document.schema';
  * formats are fetched and shown as text; Word and Excel have no browser
  * renderer at all, so those offer a download instead of an empty frame.
  *
- * ponytail: no PDF.js, no docx-to-html converter. The native viewer covers the
- * formats that can be covered; add a converter only if reading .docx in-app
- * turns out to matter.
+ * .docx has no native viewer either, so mammoth converts it to HTML in the
+ * page. .xlsx stays download-only — see `preview.service.ts` for why.
+ *
+ * ponytail: no PDF.js. Chrome's own viewer is better than anything worth
+ * building, and mammoth is the one converter that earns its place.
  */
 export function DocumentPreviewModal({
   projectId,
@@ -78,6 +80,8 @@ export function DocumentPreviewModal({
           </div>
         ) : kind === 'text' ? (
           <TextPreview url={url} />
+        ) : kind === 'docx' ? (
+          <DocxPreview url={url} />
         ) : (
           <BlobFrame url={url} title={document.name} isPdf={kind === 'pdf'} />
         )}
@@ -196,5 +200,78 @@ function TextPreview({ url }: { url: string }) {
     <pre className="scroll-thin size-full overflow-auto p-4 font-mono text-xs whitespace-pre-wrap">
       {state.text}
     </pre>
+  );
+}
+
+/**
+ * Word, converted to HTML in the browser.
+ *
+ * mammoth is loaded on demand — it is ~2.5 MB, and most previews are not Word,
+ * so it has no business in the main bundle.
+ *
+ * The HTML it produces is inserted with `dangerouslySetInnerHTML`, which needs
+ * justifying: the input is a user-uploaded .docx, so it cannot be trusted. What
+ * makes it safe is that mammoth does not pass markup through — it walks the
+ * OOXML document tree and emits its own tags from a fixed whitelist (headings,
+ * paragraphs, lists, tables, bold/italic, links). A `<script>` written inside a
+ * Word file is text in the document body, not a node in the output. The one
+ * thing it can carry is a hyperlink `href`, which is why `sanitizeHrefs` runs
+ * over the result and strips anything that is not http(s) — a `javascript:`
+ * link is the one hole this shape leaves.
+ */
+function DocxPreview({ url }: { url: string }) {
+  const { t } = useI18n();
+  const [state, setState] = useState<{ url: string; html: string | null; failed: boolean }>({
+    url,
+    html: null,
+    failed: false,
+  });
+
+  if (state.url !== url) setState({ url, html: null, failed: false });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const [response, mammoth] = await Promise.all([
+          fetch(url, { signal: controller.signal, credentials: 'same-origin' }),
+          import('mammoth/mammoth.browser'),
+        ]);
+        if (!response.ok) throw new Error('failed');
+        const buffer = await response.arrayBuffer();
+        const { value } = await mammoth.convertToHtml({ arrayBuffer: buffer });
+        if (!cancelled) setState({ url, html: sanitizeHrefs(value), failed: false });
+      } catch (error) {
+        if (!cancelled && (error as Error)?.name !== 'AbortError') {
+          setState({ url, html: null, failed: true });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [url]);
+
+  if (state.failed) {
+    return (
+      <p className="text-status-failed flex h-full items-center justify-center p-6 text-sm">
+        {t('preview.loadFailed')}
+      </p>
+    );
+  }
+
+  if (state.html === null) return <div className="size-full" />;
+
+  return (
+    <div
+      className="docx-preview scroll-thin size-full overflow-auto p-6 text-sm leading-relaxed"
+      // Safe because mammoth generates these tags rather than passing markup
+      // through, and `sanitizeHrefs` has already stripped non-http(s) links.
+      dangerouslySetInnerHTML={{ __html: state.html }}
+    />
   );
 }
