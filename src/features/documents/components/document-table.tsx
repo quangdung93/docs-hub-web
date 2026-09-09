@@ -7,6 +7,7 @@ import { useI18n } from '@/core/i18n';
 import { formatRelativeTime } from '@/shared/lib/format';
 import {
   Badge,
+  ConfirmDialog,
   DataTable,
   ErrorState,
   FileTypeIcon,
@@ -61,6 +62,11 @@ export function DocumentTable({
   const [opened, setOpened] = useState<{ id: string; tab: 'info' | 'history' } | null>(null);
   /** Which row's file is being previewed. */
   const [previewId, setPreviewId] = useState<string | null>(null);
+  /** The row awaiting delete confirmation. Deleting is a soft delete on the
+   *  backend, but it still pulls the document out of every listing and out of
+   *  retrieval, so it goes through the same gate as the other destructive
+   *  actions in the app rather than firing straight off the icon. */
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -238,7 +244,7 @@ export function DocumentTable({
                       label={t('documents.action.delete')}
                       className="hover:text-status-failed"
                       disabled={deleteDocument.isPending}
-                      onClick={() => deleteDocument.mutate(document.id)}
+                      onClick={() => setPendingDelete({ id: document.id, name: document.name })}
                     />
                   </div>
                 </TableCell>
@@ -258,6 +264,22 @@ export function DocumentTable({
         document={(documents ?? []).find((item) => item.id === opened?.id) ?? null}
         initialTab={opened?.tab ?? 'info'}
         onClose={() => setOpened(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={t('documents.delete.title')}
+        description={t('documents.delete.description', { name: pendingDelete?.name ?? '' })}
+        confirmLabel={t('documents.action.delete')}
+        cancelLabel={t('common.cancel')}
+        pending={deleteDocument.isPending}
+        onConfirm={() => {
+          if (!pendingDelete) return;
+          deleteDocument.mutate(pendingDelete.id, {
+            onSettled: () => setPendingDelete(null),
+          });
+        }}
+        onCancel={() => setPendingDelete(null)}
       />
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">

@@ -5,7 +5,13 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 
 import { queryKeys } from '@/core/api';
 
-import { documentsApi, versionsApi, type DocumentListParams } from '../api/documents.api';
+import {
+  documentsApi,
+  reportsApi,
+  versionsApi,
+  type DocumentListParams,
+  type GenerateReportInput,
+} from '../api/documents.api';
 
 export const documentListQueryOptions = (projectId: string, params: DocumentListParams = {}) =>
   queryOptions({
@@ -103,6 +109,35 @@ export function useVersionLabels(projectId: string) {
         versionId ? (byId.get(versionId) ?? versionId.slice(0, 8)) : null,
     };
   }, [versions]);
+}
+
+/** Past report exports, newest first. */
+export function useReportHistory(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.reports.history(projectId),
+    queryFn: ({ signal }) => reportsApi.history(projectId, signal),
+    // The download URLs are signed for 900s, so a cached page of them goes stale
+    // in a way a normal list does not — refetch rather than hand out dead links.
+    staleTime: 60_000,
+    enabled,
+  });
+}
+
+/**
+ * Generate a report through RAGFlow.
+ *
+ * Deliberately not optimistic and deliberately slow-tolerant: generation takes
+ * tens of seconds, and the caller shows a pending state for the whole time. On
+ * success the history list is invalidated, because the new report belongs there.
+ */
+export function useGenerateReport(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: GenerateReportInput) => reportsApi.generate(projectId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });
+    },
+  });
 }
 
 export function useCreateProjectVersion(projectId: string) {

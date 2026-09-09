@@ -30,6 +30,11 @@ export const queryKeys = {
     list: (projectId: string) => ['versions', 'list', projectId] as const,
   },
 
+  reports: {
+    all: ['reports'] as const,
+    history: (projectId: string) => ['reports', 'history', projectId] as const,
+  },
+
   chat: {
     /** Conversations in a project. */
     conversations: (projectId: string) => ['chat', 'conversations', projectId] as const,

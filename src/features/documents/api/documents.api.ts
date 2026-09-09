@@ -7,9 +7,12 @@ import {
   DocumentListDtoSchema,
   ProjectVersionDtoSchema,
   ProjectVersionListDtoSchema,
+  ReportHistoryDtoSchema,
+  ReportResultDtoSchema,
   RevisionDtoSchema,
   UploadResponseDtoSchema,
   type ProjectVersionDto,
+  type ReportResultDto,
 } from './document.dto';
 import { toDocument, toDocumentStatus } from '../services/document.mapper';
 import { toIngestionStage } from '../services/ingestion.service';
@@ -47,6 +50,54 @@ export interface UploadOptions {
   title?: string;
   description?: string;
   onProgress?: (percent: number) => void;
+}
+
+export type ReportFormat = 'xlsx' | 'pdf';
+
+/** Everything `POST .../documents/uat-report` accepts. All of it optional. */
+export interface UatReportOptions {
+  format?: ReportFormat;
+  /** Narrows the export to one version. Omit for every latest document. */
+  projectVersionId?: string;
+  /** Header block of the ISC template. */
+  po?: string;
+  pm?: string;
+  scopeTest?: string;
+  accountTest?: string;
+  /** Test window. Dates, not datetimes, as far as the user is concerned. */
+  startDate?: string;
+  dueDate?: string;
+}
+
+/**
+ * Build the request body, dropping blank fields and widening dates.
+ *
+ * The date fields demand full RFC 3339: `2026-09-01` is rejected with REQ_400
+ * while `2026-09-01T00:00:00Z` is accepted (verified 09/09/2026). Swagger types
+ * both as a bare string, so this is the only place that knows. The UI collects
+ * them from `<input type="date">`, which always yields the short form.
+ *
+ * Blank strings are omitted rather than sent: the backend prints whatever it is
+ * given straight into the sheet, so an empty field would stamp an empty label
+ * over the template's own placeholder.
+ */
+export function toUatReportBody(options: UatReportOptions): Record<string, string> {
+  const atMidnight = (date?: string) => (date?.trim() ? `${date.trim()}T00:00:00Z` : undefined);
+
+  const body: Record<string, string | undefined> = {
+    format: options.format,
+    project_version_id: options.projectVersionId,
+    po: options.po?.trim(),
+    pm: options.pm?.trim(),
+    scope_test: options.scopeTest?.trim(),
+    account_test: options.accountTest?.trim(),
+    start_date: atMidnight(options.startDate),
+    due_date: atMidnight(options.dueDate),
+  };
+
+  return Object.fromEntries(
+    Object.entries(body).filter((entry): entry is [string, string] => Boolean(entry[1]))
+  );
 }
 
 export const documentsApi = {
@@ -189,17 +240,29 @@ export const documentsApi = {
     `${API_BASE}${endpoints.documents.revisionView(projectId, documentId, revisionId)}`,
 
   /**
-   * Export the UAT report. Returns the .xlsx bytes, not a URL — the endpoint is
+   * Export the UAT report. Returns the file bytes, not a URL — the endpoint is
    * a POST, so it cannot be an `<a href>` the way download and view are.
    *
-   * Covers the whole project. `project_version_id` is accepted but only narrows
-   * the scope to nothing useful — a version holding no documents answers 400
-   * rather than an empty report — so the caller no longer sends one.
+   * This fills the ISC template mechanically; it does not go through RAGFlow.
+   * That is why it stays available when `reportsApi.generate` is answering
+   * EXT_504, and why it is the export the UI reaches for by default.
+   *
+   * Every field is optional — an empty body exports the whole project in xlsx.
+   * All of them were verified against the running API on 09/09/2026:
+   *  - `format: 'pdf'` returns a real PDF (3 pages, ~52 KB), not a renamed
+   *    workbook. The UI used to refuse it as unimplemented; it was not.
+   *  - `projectVersionId` narrows the scope and works. An older comment here
+   *    claimed it only ever answered 400 — that is no longer true.
+   *  - The PO/PM/scope fields land in the generated sheet (checked by writing
+   *    markers and reading them back out of the xlsx XML).
    */
-  exportUatReport: async (projectId: string): Promise<{ blob: Blob; fileName: string }> => {
+  exportUatReport: async (
+    projectId: string,
+    options: UatReportOptions = {}
+  ): Promise<{ blob: Blob; fileName: string }> => {
     const response = await http.post(
       endpoints.documents.uatReport(projectId),
-      {},
+      toUatReportBody(options),
       { responseType: 'blob' }
     );
 
@@ -208,7 +271,9 @@ export const documentsApi = {
     // which would collide the moment someone exports two projects.
     return {
       blob: response.data as Blob,
-      fileName: fileNameFrom(response.headers['content-disposition']) ?? 'UAT_Report.xlsx',
+      fileName:
+        fileNameFrom(response.headers['content-disposition']) ??
+        `UAT_Report.${options.format ?? 'xlsx'}`,
     };
   },
 };
@@ -237,6 +302,52 @@ export function fileNameFrom(header: unknown): string | null {
   const plain = /filename="?([^";]+)"?/i.exec(header);
   return plain?.[1]?.trim() || null;
 }
+
+/** The three report types RAGFlow knows how to write. */
+export const REPORT_TYPES = ['uat', 'planning', 'testcase'] as const;
+export type ReportType = (typeof REPORT_TYPES)[number];
+
+export interface GenerateReportInput {
+  reportType: ReportType;
+  format?: ReportFormat;
+  /** Narrows the source documents to one version. */
+  projectVersionId?: string;
+}
+
+/**
+ * RAGFlow-backed report generation, live since 09/09/2026.
+ *
+ * Unlike `documentsApi.exportUatReport` — which fills a template mechanically
+ * and streams the bytes back — this asks RAGFlow to read the project's
+ * documents and write the report, then answers with JSON holding a presigned
+ * `download_url` (900s, no bearer token, points at storage not the API).
+ *
+ * It accepts only these four fields. The PO/PM/scope/date inputs the template
+ * export takes are silently ignored here: sending them returns 200 and they do
+ * not appear in the workbook (verified 09/09/2026). That is why the UI keeps
+ * both exports rather than folding one into the other.
+ *
+ * Generation is slow (tens of seconds) and can fail on content rather than on
+ * the request — `uat` answers REQ_400 "Không tìm thấy User Story/Acceptance
+ * Criteria" when the project holds no user stories to work from. Those messages
+ * are written for the user, so they are surfaced verbatim.
+ */
+export const reportsApi = {
+  generate: async (projectId: string, input: GenerateReportInput): Promise<ReportResultDto> => {
+    const { data } = await http.post(endpoints.reports.generate(projectId), {
+      report_type: input.reportType,
+      ...(input.format ? { format: input.format } : {}),
+      ...(input.projectVersionId ? { project_version_id: input.projectVersionId } : {}),
+    });
+    return apiSuccessSchema(ReportResultDtoSchema).parse(data).data;
+  },
+
+  /** Past exports, newest first, each with a freshly signed download link. */
+  history: async (projectId: string, signal?: AbortSignal): Promise<ReportResultDto[]> => {
+    const { data } = await http.get(endpoints.reports.history(projectId), { signal });
+    return apiSuccessSchema(ReportHistoryDtoSchema).parse(data).data;
+  },
+};
 
 /**
  * Project versions. Uploads are scoped to one, so the upload screen has to be

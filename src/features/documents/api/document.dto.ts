@@ -91,9 +91,34 @@ export const ProjectVersionDtoSchema = z.object({
 export const DocumentListDtoSchema = z.array(DocumentDtoSchema);
 export const ProjectVersionListDtoSchema = z.array(ProjectVersionDtoSchema);
 
+/**
+ * A generated report and the presigned link to fetch it.
+ *
+ * Both `POST .../reports` and `GET .../reports/history` return this same pair,
+ * so one schema covers both. The URL is signed for 900 seconds and needs no
+ * bearer token — it points straight at storage, not at the API.
+ */
+export const ReportDtoSchema = z.object({
+  id: z.string(),
+  project_id: z.string(),
+  report_type: z.string(),
+  format: z.string(),
+  generated_by: z.string().nullish(),
+  created_at: z.string(),
+});
+
+export const ReportResultDtoSchema = z.object({
+  report: ReportDtoSchema,
+  download_url: z.string(),
+});
+
+export const ReportHistoryDtoSchema = z.array(ReportResultDtoSchema);
+
 export type DocumentDto = z.infer<typeof DocumentDtoSchema>;
 export type RevisionDto = z.infer<typeof RevisionDtoSchema>;
 export type UploadResponseDto = z.infer<typeof UploadResponseDtoSchema>;
 export type DocumentDetailDto = z.infer<typeof DocumentDetailDtoSchema>;
 export type PresignResultDto = z.infer<typeof PresignResultDtoSchema>;
 export type ProjectVersionDto = z.infer<typeof ProjectVersionDtoSchema>;
+export type ReportDto = z.infer<typeof ReportDtoSchema>;
+export type ReportResultDto = z.infer<typeof ReportResultDtoSchema>;

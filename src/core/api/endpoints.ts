@@ -82,6 +82,22 @@ export const endpoints = {
       `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/view`,
   },
 
+  /**
+   * Report generation, added to Swagger 09/09/2026. Supersedes
+   * `documents.uatReport` for anything beyond a plain UAT export: it takes a
+   * `report_type` (uat | planning | testcase) and returns JSON holding a
+   * `download_url`, where `uat-report` streams the bytes directly.
+   *
+   * Swagger documents these as `/projects/{id}/reports` with no prefix, which
+   * 404s. The real routes carry `/internal/api/v1` like every other
+   * authenticated path — verified by probe on 09/09/2026: the prefixed form
+   * answers 401, the bare form 404.
+   */
+  reports: {
+    generate: (projectId: string) => `${INTERNAL}/projects/${projectId}/reports`,
+    history: (projectId: string) => `${INTERNAL}/projects/${projectId}/reports/history`,
+  },
+
   // Deployed and wired against the real API since 24/08/2026 — note Swagger was
   // NOT regenerated, so it still documents these responses as a bare
   // `response.Envelope`. The shapes in `features/chat/api/chat.dto.ts` come from
