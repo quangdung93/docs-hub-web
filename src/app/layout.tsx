@@ -12,6 +12,13 @@ export const metadata: Metadata = {
   },
   description: 'Enterprise document management platform.',
   applicationName: 'Docs Hub',
+  // Trỏ thẳng vào file trong `public/`. Không dùng quy ước `app/icon.png` của
+  // Next vì bộ asset này (favicon + apple-touch + logo trên header) dùng chung
+  // một nguồn ảnh, để cạnh nhau trong `public/` thì dễ thay cả bộ hơn.
+  icons: {
+    icon: '/favicon.png',
+    apple: '/apple-icon.png',
+  },
   robots: { index: false, follow: false },
 };
 

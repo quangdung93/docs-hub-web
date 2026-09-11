@@ -12,64 +12,47 @@ import {
 } from 'lucide-react';
 
 import { useI18n } from '@/core/i18n';
-import { Button, Field, Input, messageOf, Modal, Select, showErrorToast } from '@/shared/ui';
+import { Button, Field, messageOf, Modal, Select, showErrorToast } from '@/shared/ui';
 
-import { documentsApi, type ReportFormat, type ReportType } from '../api/documents.api';
+import { type ReportFormat, type ReportType } from '../api/documents.api';
 import { useGenerateReport, useProjectVersions } from '../hooks/use-documents';
 import { reportDownloadHref } from '../services/report.service';
 
 import { ReportHistoryModal } from './report-history-modal';
 
 /**
- * "Xuất báo cáo" — the entry point for every report the project can produce.
+ * "Xuất báo cáo" — mọi báo cáo dự án xuất được đều đi qua đây.
  *
- * There are two different exports behind this menu, and the split is real
- * rather than cosmetic:
+ * Tất cả đều dùng `POST .../projects/{id}/reports`: RAGFlow đọc tài liệu rồi
+ * viết báo cáo, trả về một presigned URL. Mất vài chục giây và có thể hỏng vì
+ * nội dung chứ không phải vì request — `uat` trả REQ_400 "Không tìm thấy User
+ * Story/Acceptance Criteria" khi tài liệu dự án không có gì để dựa vào.
  *
- *  - **UAT · template ISC** → `POST .../documents/uat-report`. Fills the ISC
- *    workbook mechanically, streams the bytes back, and accepts the PO / PM /
- *    scope / date header fields. No AI involved, so it is fast and predictable.
- *  - **UAT · AI, Planning, Testcase** → `POST .../projects/{id}/reports`. Asks
- *    RAGFlow to read the documents and write the report, then answers with a
- *    presigned download URL. Takes tens of seconds and can fail on content.
- *
- * Both UAT rows are offered because neither is a superset: the template one is
- * the only way to stamp acceptance details onto the sheet (RAGFlow accepts
- * those fields and silently drops them), and the AI one is the only one that
- * writes test cases from the documents themselves.
+ * Nhánh template ISC (`POST .../documents/uat-report`) đã gỡ khỏi giao diện:
+ * nó chỉ điền biểu mẫu rồi liệt kê tên tài liệu, không sinh test case nào, nên
+ * file xuất ra gần như trống phần nghiệp vụ. Transport `exportUatReport` vẫn
+ * còn trong `documents.api.ts` cho trường hợp cần bật lại.
  */
 const REPORT_FORMATS = ['xlsx', 'pdf'] as const;
 
-/** Sentinel for "no version filter", since a Select needs a real string value. */
+/** Giá trị canh cho "không lọc theo phiên bản" — Select cần một chuỗi thật. */
 const ALL_VERSIONS = 'all';
-
-/** Which export the dialog is currently set up for. */
-type ExportKind = 'uat-template' | ReportType;
 
 export function ExportReportMenu({ projectId }: { projectId: string }) {
   const { t } = useI18n();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [kind, setKind] = useState<ExportKind | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+  const [kind, setKind] = useState<ReportType | null>(null);
   const [format, setFormat] = useState<ReportFormat>('xlsx');
   const [versionId, setVersionId] = useState<string>(ALL_VERSIONS);
-  const [details, setDetails] = useState({
-    po: '',
-    pm: '',
-    scopeTest: '',
-    accountTest: '',
-    startDate: '',
-    dueDate: '',
-  });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { data: versions } = useProjectVersions(projectId);
   const generateReport = useGenerateReport(projectId);
 
-  // Close on an outside click or Escape. Scoped to the container so a click
-  // inside the menu (picking a report type) does not dismiss it first.
+  // Đóng khi bấm ra ngoài hoặc nhấn Escape. Giới hạn trong container để một cú
+  // bấm vào chính menu (chọn loại báo cáo) không tự đóng menu trước.
   useEffect(() => {
     if (!menuOpen) return;
     const onPointerDown = (event: PointerEvent) => {
@@ -91,56 +74,18 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
     ...(versions ?? []).map((version) => ({ value: version.id, label: version.label })),
   ];
 
-  const setDetail = (key: keyof typeof details) => (value: string) =>
-    setDetails((current) => ({ ...current, [key]: value }));
-
-  const openDialog = (next: ExportKind) => {
+  const openDialog = (next: ReportType) => {
     setKind(next);
     setMenuOpen(false);
   };
 
-  /** Hand a URL to the browser as a download. */
-  const saveAs = (href: string, fileName?: string) => {
-    const link = document.createElement('a');
-    link.href = href;
-    if (fileName) link.download = fileName;
-    link.click();
-  };
-
   /**
-   * Template export: the response *is* the file, so it arrives as a blob and is
-   * handed over through an object URL. Revoked immediately — leaving it alive
-   * pins the whole file in memory for the life of the tab.
-   */
-  const runTemplateExport = async () => {
-    setIsExporting(true);
-    try {
-      const { blob, fileName } = await documentsApi.exportUatReport(projectId, {
-        format,
-        projectVersionId: versionId === ALL_VERSIONS ? undefined : versionId,
-        ...details,
-      });
-      const url = URL.createObjectURL(blob);
-      saveAs(url, fileName);
-      URL.revokeObjectURL(url);
-      setKind(null);
-    } catch (error) {
-      // The backend's own words — "Không có tài liệu nào trong phạm vi đã chọn"
-      // tells the user what to change; a generic failure does not.
-      showErrorToast(messageOf(error, t('reports.exportFailed')));
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  /**
-   * RAGFlow export: the response is JSON with a presigned URL pointing at
-   * storage, not at the API.
+   * Tải file về máy.
    *
-   * The download goes through `/api/storage-get` rather than straight at that
-   * URL. Two reasons, both load-bearing: `connect-src 'self'` blocks the page
-   * from fetching storage at all, and a cross-origin href ignores `download`,
-   * so the file would save under its UUID object key.
+   * Đi qua `/api/storage-get` chứ không trỏ thẳng vào presigned URL. Hai lý do
+   * đều quan trọng: `connect-src 'self'` chặn trang fetch tới storage, và một
+   * href khác origin thì thuộc tính `download` bị bỏ qua — file sẽ lưu theo
+   * tên object key dạng UUID.
    */
   const runGenerate = async (reportType: ReportType) => {
     try {
@@ -150,29 +95,25 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
         projectVersionId: versionId === ALL_VERSIONS ? undefined : versionId,
       });
 
-      saveAs(
-        reportDownloadHref(
-          result.download_url,
-          result.report.report_type,
-          result.report.format,
-          result.report.created_at
-        )
+      const link = document.createElement('a');
+      link.href = reportDownloadHref(
+        result.download_url,
+        result.report.report_type,
+        result.report.format,
+        result.report.created_at
       );
+      link.click();
       setKind(null);
     } catch (error) {
-      // Content failures land here too — "Không tìm thấy User Story/Acceptance
-      // Criteria nào trong tài liệu dự án" is the backend telling the user their
-      // documents lack what this report needs, which is worth reading verbatim.
+      // Lỗi do nội dung cũng rơi vào đây — "Không tìm thấy User Story/Acceptance
+      // Criteria nào trong tài liệu dự án" là backend đang nói với người dùng
+      // rằng tài liệu thiếu thứ báo cáo này cần, nên hiển thị nguyên văn.
       showErrorToast(messageOf(error, t('reports.generateFailed')));
     }
   };
 
-  const isTemplate = kind === 'uat-template';
-  const pending = isTemplate ? isExporting : generateReport.isPending;
-
-  const dialogTitle = isTemplate
-    ? t('reports.uatTemplate')
-    : kind === 'planning'
+  const dialogTitle =
+    kind === 'planning'
       ? t('reports.planning')
       : kind === 'testcase'
         ? t('reports.testcase')
@@ -193,17 +134,6 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
         >
           <p className="text-muted-foreground px-2 py-1 text-[11px] font-semibold tracking-wide uppercase">
             {t('reports.menuTitle')}
-          </p>
-
-          <MenuItem
-            icon={FileCheck2}
-            title={t('reports.uatTemplate')}
-            hint={t('reports.uatTemplateHint')}
-            onClick={() => openDialog('uat-template')}
-          />
-
-          <p className="text-muted-foreground mt-1 px-2 py-1 text-[11px] font-semibold tracking-wide uppercase">
-            {t('reports.aiGroup')}
           </p>
 
           <MenuItem
@@ -241,34 +171,31 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
       <Modal
         open={kind !== null}
         title={dialogTitle}
-        icon={isTemplate ? FileCheck2 : Sparkles}
+        icon={kind === 'uat' ? FileCheck2 : Sparkles}
         onClose={() => setKind(null)}
         className="w-[min(40rem,calc(100vw-2rem))]"
         footer={
           <>
-            <Button variant="outline" onClick={() => setKind(null)} disabled={pending}>
+            <Button
+              variant="outline"
+              onClick={() => setKind(null)}
+              disabled={generateReport.isPending}
+            >
               {t('common.cancel')}
             </Button>
             <Button
-              disabled={pending}
+              disabled={generateReport.isPending}
               onClick={() => {
-                if (isTemplate) void runTemplateExport();
-                else if (kind) void runGenerate(kind);
+                if (kind) void runGenerate(kind);
               }}
             >
               <Download aria-hidden />
-              {pending
-                ? isTemplate
-                  ? t('reports.exporting')
-                  : t('reports.generating')
-                : t('reports.export')}
+              {generateReport.isPending ? t('reports.generating') : t('reports.export')}
             </Button>
           </>
         }
       >
-        <p className="text-muted-foreground">
-          {isTemplate ? t('reports.modalDescription') : t('reports.generatingHint')}
-        </p>
+        <p className="text-muted-foreground">{t('reports.generatingHint')}</p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label={t('reports.scope')}>
@@ -300,66 +227,6 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
             </div>
           </div>
         </div>
-
-        {/* Only the template export writes these into the sheet. RAGFlow accepts
-            them on the wire and drops them, so offering them there would be a
-            lie about what ends up in the file. */}
-        {isTemplate && (
-          <div className="border-border mt-5 border-t pt-4">
-            <p className="text-sm font-medium">{t('reports.details')}</p>
-            <p className="text-muted-foreground mt-1 text-xs">{t('reports.detailsHint')}</p>
-
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <Field label={t('reports.po')} htmlFor="report-po">
-                <Input
-                  id="report-po"
-                  value={details.po}
-                  onChange={(event) => setDetail('po')(event.target.value)}
-                />
-              </Field>
-              <Field label={t('reports.pm')} htmlFor="report-pm">
-                <Input
-                  id="report-pm"
-                  value={details.pm}
-                  onChange={(event) => setDetail('pm')(event.target.value)}
-                />
-              </Field>
-              <Field label={t('reports.scopeTest')} htmlFor="report-scope-test">
-                <Input
-                  id="report-scope-test"
-                  value={details.scopeTest}
-                  onChange={(event) => setDetail('scopeTest')(event.target.value)}
-                />
-              </Field>
-              <Field label={t('reports.accountTest')} htmlFor="report-account-test">
-                <Input
-                  id="report-account-test"
-                  value={details.accountTest}
-                  onChange={(event) => setDetail('accountTest')(event.target.value)}
-                />
-              </Field>
-              {/* Native date inputs: the platform picker is localised, keyboard
-                  accessible and free. They yield `YYYY-MM-DD`; the transport
-                  widens that to RFC 3339, which is what the backend demands. */}
-              <Field label={t('reports.startDate')} htmlFor="report-start-date">
-                <Input
-                  id="report-start-date"
-                  type="date"
-                  value={details.startDate}
-                  onChange={(event) => setDetail('startDate')(event.target.value)}
-                />
-              </Field>
-              <Field label={t('reports.dueDate')} htmlFor="report-due-date">
-                <Input
-                  id="report-due-date"
-                  type="date"
-                  value={details.dueDate}
-                  onChange={(event) => setDetail('dueDate')(event.target.value)}
-                />
-              </Field>
-            </div>
-          </div>
-        )}
       </Modal>
 
       <ReportHistoryModal

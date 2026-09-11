@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
@@ -21,9 +22,17 @@ export function AppTopBar({ actions }: { actions?: ReactNode }) {
     <header className="border-border bg-surface-muted/90 sticky top-0 z-30 border-b backdrop-blur">
       <div className="mx-auto flex max-w-[1536px] items-center gap-2 px-4 py-2.5 lg:px-6">
         <Link href="/projects" className="flex items-center gap-2">
-          <span className="bg-brand grid size-7 place-items-center rounded-md font-bold text-white">
-            D
-          </span>
+          {/* Ảnh thật thay cho ô chữ "D" dựng bằng CSS trước đây. `priority` vì
+              logo nằm trong khối hiển thị đầu tiên trên mọi màn hình — để Next
+              lazy-load nó sẽ tạo một nhịp trống ngay đầu trang. */}
+          <Image
+            src="/logo-mark.png"
+            alt={t('app.name')}
+            width={28}
+            height={28}
+            priority
+            className="size-7 rounded-md object-cover"
+          />
           <span className="text-sm font-semibold tracking-tight">{t('app.name')}</span>
         </Link>
 
