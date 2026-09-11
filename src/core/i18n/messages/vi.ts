@@ -160,7 +160,6 @@ export const vi = {
   'documents.format.text': 'Văn bản (TXT)',
   'documents.column.name': 'Tên tài liệu',
   'documents.column.size': 'Dung lượng',
-  'documents.column.chunks': 'Số đoạn',
   'documents.column.version': 'Phiên bản',
   'documents.column.updatedAt': 'Cập nhật',
   'documents.column.status': 'Trạng thái',

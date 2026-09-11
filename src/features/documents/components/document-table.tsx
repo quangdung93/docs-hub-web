@@ -31,7 +31,7 @@ import { DocumentPreviewModal } from './document-preview-modal';
 import { DocumentStatusBadge } from './document-status-badge';
 
 const PAGE_SIZE = 6;
-const COLUMN_COUNT = 7;
+const COLUMN_COUNT = 6;
 
 /**
  * Document list with search, status filter, row selection and pagination. Filter
@@ -107,7 +107,6 @@ export function DocumentTable({
           <tr>
             <TableHeaderCell>{t('documents.column.name')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.size')}</TableHeaderCell>
-            <TableHeaderCell>{t('documents.column.chunks')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.version')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.updatedAt')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.status')}</TableHeaderCell>
@@ -172,9 +171,6 @@ export function DocumentTable({
 
                 <TableCell className="text-muted-foreground">
                   {formatBytes(document.sizeBytes)}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {document.chunkCount ?? t('common.emptyValue')}
                 </TableCell>
 
                 {/* Two different things share the word "version", so both are

@@ -157,7 +157,6 @@ export const en: Record<MessageKey, string> = {
   'documents.format.text': 'Plain text (TXT)',
   'documents.column.name': 'Document',
   'documents.column.size': 'Size',
-  'documents.column.chunks': 'Chunks',
   'documents.column.version': 'Version',
   'documents.column.updatedAt': 'Updated',
   'documents.column.status': 'Status',
