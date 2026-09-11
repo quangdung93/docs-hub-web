@@ -24,14 +24,17 @@ export function AppTopBar({ actions }: { actions?: ReactNode }) {
         <Link href="/projects" className="flex items-center gap-2">
           {/* Ảnh thật thay cho ô chữ "D" dựng bằng CSS trước đây. `priority` vì
               logo nằm trong khối hiển thị đầu tiên trên mọi màn hình — để Next
-              lazy-load nó sẽ tạo một nhịp trống ngay đầu trang. */}
+              lazy-load nó sẽ tạo một nhịp trống ngay đầu trang.
+
+              Không bo góc bằng CSS: bản thân file PNG đã bo sẵn kèm alpha, nên
+              thêm `rounded-*` ở đây là cắt chồng lên góc đã bo. */}
           <Image
             src="/logo-mark.png"
             alt={t('app.name')}
             width={28}
             height={28}
             priority
-            className="size-7 rounded-md object-cover"
+            className="size-7 object-cover"
           />
           <span className="text-sm font-semibold tracking-tight">{t('app.name')}</span>
         </Link>
