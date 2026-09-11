@@ -203,6 +203,8 @@ export const documentHandlers = [
       revisionNo: 1,
       errorMessage: null,
       version: 1,
+      isDeleted: false,
+      deletedAt: null,
       // Uploads carry the scope the client sent, so the version column and the
       // version filter reflect a real choice rather than a hardcoded default.
       projectVersionId: String(form.get('project_version_id') ?? '') || null,

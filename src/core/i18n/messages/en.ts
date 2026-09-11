@@ -278,8 +278,7 @@ export const en: Record<MessageKey, string> = {
   'history.unknownUser': 'Unknown',
   'history.action.added': 'Added',
   'history.action.updated': 'Updated',
-  'history.deletedNote':
-    'Deleted documents do not appear here — the backend soft-deletes them, but exposes no endpoint that reads them back.',
+  'history.action.deleted': 'Deleted',
 
   // ── Report export ────────────────────────────────────────────────────────
   'reports.button': 'Export report',

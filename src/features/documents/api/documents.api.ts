@@ -39,6 +39,8 @@ export interface DocumentListParams {
   limit?: number;
   /** Free-text search over the title. */
   q?: string;
+  /** Lấy kèm tài liệu đã xóa mềm. Mặc định backend lọc chúng ra. */
+  includeDeleted?: boolean;
 }
 
 export interface UploadOptions {
@@ -114,7 +116,12 @@ export const documentsApi = {
     params: DocumentListParams = {},
     signal?: AbortSignal
   ): Promise<Document[]> => {
-    const { data } = await http.get(endpoints.documents.list(projectId), { params, signal });
+    const { includeDeleted, ...rest } = params;
+    const { data } = await http.get(endpoints.documents.list(projectId), {
+      // Tên tham số trên wire là snake_case; phần còn lại đã trùng tên nên đi thẳng.
+      params: { ...rest, ...(includeDeleted ? { include_deleted: true } : {}) },
+      signal,
+    });
     const dtos = apiSuccessSchema(DocumentListDtoSchema).parse(data).data;
 
     // The list endpoint omits revisions, and revisions are where size, format and
@@ -128,6 +135,11 @@ export const documentsApi = {
     // inline would remove it — requested in docs/api-gaps.md.
     return Promise.all(
       dtos.map(async (dto) => {
+        // `GET /documents/{id}` trả 404 cho tài liệu đã xóa mềm, kể cả khi thêm
+        // `include_deleted=true` (kiểm chứng 11/09/2026). Gọi vào đó chỉ tốn một
+        // request để rơi vào nhánh catch, nên dựng thẳng từ dữ liệu list.
+        if (dto.is_deleted) return toDocument(dto);
+
         try {
           const { data: detail } = await http.get(endpoints.documents.detail(projectId, dto.id), {
             signal,

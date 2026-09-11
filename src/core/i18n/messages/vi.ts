@@ -282,8 +282,7 @@ export const vi = {
   'history.unknownUser': 'Không rõ',
   'history.action.added': 'Thêm mới',
   'history.action.updated': 'Cập nhật',
-  'history.deletedNote':
-    'Tài liệu đã xóa không hiển thị ở đây — backend xóa mềm nhưng chưa có API nào đọc lại được.',
+  'history.action.deleted': 'Đã xóa',
 
   // ── Xuất báo cáo ─────────────────────────────────────────────────────────
   'reports.button': 'Xuất báo cáo',

@@ -29,6 +29,12 @@ export const DocumentDtoSchema = z.object({
   updated_at: z.string(),
   /** Optimistic-locking counter — PATCH echoes it back and rejects a stale one. */
   version: z.number().int(),
+  /**
+   * Xóa mềm. Chỉ xuất hiện khi list được gọi kèm `include_deleted=true`; mặc
+   * định backend lọc hẳn các bản ghi này ra nên hai trường dưới vắng mặt.
+   */
+  is_deleted: z.boolean().nullish(),
+  deleted_at: z.string().nullish(),
 });
 
 /**

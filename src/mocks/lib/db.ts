@@ -140,6 +140,8 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    isDeleted: false,
+    deletedAt: null,
     projectVersionId: 'v-mock-draft',
     history: [
       {
@@ -168,6 +170,8 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    isDeleted: false,
+    deletedAt: null,
     projectVersionId: 'v-mock-published',
     history: [
       {
@@ -196,6 +200,8 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    isDeleted: false,
+    deletedAt: null,
     projectVersionId: 'v-mock-draft',
     history: [
       {
@@ -224,6 +230,8 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    isDeleted: false,
+    deletedAt: null,
     projectVersionId: 'v-mock-published',
     history: [
       {
@@ -252,6 +260,8 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    isDeleted: false,
+    deletedAt: null,
     projectVersionId: 'v-mock-draft',
     history: [
       {
@@ -280,6 +290,8 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    isDeleted: false,
+    deletedAt: null,
     projectVersionId: 'v-mock-published',
     history: [
       {
@@ -308,6 +320,8 @@ const kycDocuments: Document[] = [
     revisionNo: 1,
     errorMessage: null,
     version: 1,
+    isDeleted: false,
+    deletedAt: null,
     projectVersionId: 'v-mock-draft',
     history: [
       {

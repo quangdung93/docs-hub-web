@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
 import { formatRelativeTime } from '@/shared/lib/format';
+import { cn } from '@/shared/lib/utils';
 import { Badge, ErrorState, FileTypeIcon, Skeleton } from '@/shared/ui';
 
 import { useDocuments, useVersionLabels } from '../hooks/use-documents';
@@ -21,28 +22,35 @@ import { DocumentStatusBadge } from './document-status-badge';
  * — it is a different view of data the table has already paid for.
  *
  * There is no history endpoint to use instead: `/projects/{id}/activities`,
- * `/audit-logs` and `/history` all 404 (verified 28/08/2026).
+ * `/audit-logs` and `/history` all 404 (verified 11/09/2026).
  *
  * Each entry is labelled Thêm mới or Cập nhật, derived from the revision number:
  * revision 1 created the document, anything above it replaced the file.
  *
- * Deletions cannot be shown. `DELETE /documents/{id}` removes the row outright —
- * it leaves the list, and fetching it by id answers 404 (verified 07/09/2026) —
- * so a deleted document leaves nothing for the client to read. The note at the
- * foot of the list says so, because a history that silently omits deletions
- * reads as complete when it is not.
+ * Deletions **are** shown, since the backend gained `?include_deleted=true` on
+ * the list endpoint (11/09/2026). Nhưng một tài liệu đã xóa không kèm revision
+ * nào trong response, nên mục "Đã xóa" được dựng từ `deleted_at` thay vì từ
+ * `history` — xem `entries` bên dưới. `GET /documents/{id}` vẫn trả 404 cho bản
+ * ghi đã xóa, kể cả khi thêm `include_deleted`, nên transport bỏ qua bước gọi
+ * detail cho những dòng đó.
  */
 export function DocumentHistoryList({ projectId }: { projectId: string }) {
   const { t, locale } = useI18n();
-  const { data: documents, isPending, isError, error, refetch } = useDocuments(projectId);
+  const {
+    data: documents,
+    isPending,
+    isError,
+    error,
+    refetch,
+  } = useDocuments(projectId, { includeDeleted: true });
   const { labelOf } = useVersionLabels(projectId);
   const [openedId, setOpenedId] = useState<string | null>(null);
 
   const entries = useMemo(
     () =>
       (documents ?? [])
-        .flatMap((document) =>
-          document.history.map((revision) => ({
+        .flatMap((document) => {
+          const uploads = document.history.map((revision) => ({
             ...revision,
             documentId: document.id,
             documentName: document.name,
@@ -51,8 +59,34 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
             isFirst: revision.revisionNo === 1,
             // The newest revision of a document is the one the table shows.
             isCurrent: revision.id === document.revisionId,
-          }))
-        )
+            isDeletion: false,
+          }));
+
+          if (!document.isDeleted || !document.deletedAt) return uploads;
+
+          // Một tài liệu đã xóa không kèm revision nào trong response list, nên
+          // `uploads` rỗng và nó sẽ biến mất khỏi dòng thời gian nếu chỉ dựa vào
+          // đó. Mục xóa được dựng thẳng từ `deletedAt`.
+          return [
+            ...uploads,
+            {
+              id: `${document.id}:deleted`,
+              revisionNo: document.revisionNo ?? 1,
+              fileName: document.fileName ?? document.name,
+              sizeBytes: document.sizeBytes,
+              status: document.status,
+              projectVersionId: document.projectVersionId,
+              uploadedBy: null,
+              // Dùng chung trường thời gian để sắp xếp cả dòng thời gian.
+              uploadedAt: document.deletedAt,
+              documentId: document.id,
+              documentName: document.name,
+              isFirst: false,
+              isCurrent: false,
+              isDeletion: true,
+            },
+          ];
+        })
         .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)),
     [documents]
   );
@@ -101,35 +135,57 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
               <FileTypeIcon fileName={entry.fileName} />
               <div className="min-w-0 leading-tight">
                 <div className="flex items-center gap-2">
-                  {/* Revision 1 created the document; anything above replaced
-                      its file. Deletions cannot appear — see the note below. */}
-                  <Badge variant={entry.isFirst ? 'indexed' : 'brand'} className="shrink-0">
-                    {entry.isFirst ? t('history.action.added') : t('history.action.updated')}
+                  {/* Ba loại mục: revision 1 tạo tài liệu, revision sau thay thế
+                      file, và mục xóa dựng từ `deletedAt`. */}
+                  <Badge
+                    variant={entry.isDeletion ? 'failed' : entry.isFirst ? 'indexed' : 'brand'}
+                    className="shrink-0"
+                  >
+                    {entry.isDeletion
+                      ? t('history.action.deleted')
+                      : entry.isFirst
+                        ? t('history.action.added')
+                        : t('history.action.updated')}
                   </Badge>
-                  <span className="truncate text-sm font-medium">{entry.documentName}</span>
-                </div>
-                <div className="text-muted-foreground truncate text-xs">
-                  <span className="text-muted-foreground font-normal">
-                    {t('history.revision', { no: entry.revisionNo })}
+                  <span
+                    className={cn(
+                      'truncate text-sm font-medium',
+                      entry.isDeletion && 'text-muted-foreground line-through'
+                    )}
+                  >
+                    {entry.documentName}
                   </span>
                 </div>
+                {/* Cùng lý do: số revision của mục xóa cũng không đọc được từ
+                    response, nên chỉ hiện cho các mục tải lên. */}
+                {!entry.isDeletion && (
+                  <div className="text-muted-foreground truncate text-xs">
+                    <span className="text-muted-foreground font-normal">
+                      {t('history.revision', { no: entry.revisionNo })}
+                    </span>
+                  </div>
+                )}
                 <div className="text-muted-foreground mt-0.5 text-xs">
-                  {formatRelativeTime(entry.uploadedAt, locale)} · {formatBytes(entry.sizeBytes)}
+                  {formatRelativeTime(entry.uploadedAt, locale)}
+                  {/* Response list không kèm revision cho tài liệu đã xóa, nên
+                      `sizeBytes` là 0 do mapper gán mặc định chứ không phải số
+                      đo được. Hiện "0 B" sẽ là bịa ra một con số. */}
+                  {!entry.isDeletion && ` · ${formatBytes(entry.sizeBytes)}`}
                   {versionLabel && ` · ${versionLabel}`}
                 </div>
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <DocumentStatusBadge status={entry.status} />
-            </div>
+            {/* Trạng thái ingest của một tài liệu đã xóa không còn nghĩa gì, nên
+                mục xóa không mang badge trạng thái. */}
+            {!entry.isDeletion && (
+              <div className="flex shrink-0 items-center gap-2">
+                <DocumentStatusBadge status={entry.status} />
+              </div>
+            )}
           </button>
         );
       })}
-
-      {/* Says what the list cannot show, so its silence is not read as "nothing
-          was ever deleted". */}
-      <p className="text-muted-foreground pt-1 text-xs italic">{t('history.deletedNote')}</p>
 
       <DocumentDetailModal
         projectId={projectId}

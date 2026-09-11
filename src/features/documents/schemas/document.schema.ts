@@ -40,6 +40,12 @@ export const DocumentSchema = z.object({
    */
   revisionId: z.string().nullable(),
   revisionNo: z.number().int().nullable(),
+  /**
+   * Tài liệu đã xóa mềm. Chỉ có giá trị `true` khi danh sách được lấy kèm
+   * `includeDeleted`; ngoài luồng đó backend không trả các bản ghi này.
+   */
+  isDeleted: z.boolean(),
+  deletedAt: z.iso.datetime().nullable(),
   /** Reason for `status: 'failed'`, straight from the ingestion worker. */
   errorMessage: z.string().nullable(),
   /**
