@@ -101,7 +101,11 @@ export function VersionPickerPill({
                 )}
               >
                 <span className="flex min-w-0 items-center gap-2">
-                  {current ? (
+                  {/* Tích đánh dấu mục ĐANG CHỌN, không phải mục mới nhất.
+                      Trước đây bind nhầm vào `current` nên tích luôn nằm ở bản
+                      mới nhất dù đang xem bản cũ — lệch hẳn với nền xanh bên
+                      dưới vốn dùng `active`, thành hai chỉ báo đá nhau. */}
+                  {version.id === active.id ? (
                     <Check className="text-status-indexed size-3.5 shrink-0" aria-hidden />
                   ) : (
                     <Circle className="text-muted-foreground/40 size-3.5 shrink-0" aria-hidden />
