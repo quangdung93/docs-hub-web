@@ -181,7 +181,12 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
             // Driven by the pill in the header, which replaced a duplicate
             // dropdown here — two controls for one thing meant changing the
             // wrong one had no visible effect.
-            versionFilter={viewingVersion ?? 'all'}
+            //
+            // `null` ở pill nghĩa là "phiên bản mới nhất", không phải "tất cả".
+            // Trước đây nó rơi thẳng về 'all' nên chọn phiên bản mới nhất là
+            // filter tự tắt, bảng hiện tài liệu của mọi phiên bản. Phân giải về
+            // id của bản mới nhất để pill và bảng nói cùng một thứ.
+            versionFilter={viewingVersion ?? orderedVersions[0]?.id ?? 'all'}
           />
         </>
       ) : pane === 'history' ? (
