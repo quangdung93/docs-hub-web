@@ -171,6 +171,15 @@ export function useChat(projectId: string) {
       // strand a question with no answer and no way to retry it.
       if (context.previous) queryClient.setQueryData(context.key, context.previous);
       else queryClient.removeQueries({ queryKey: context.key, exact: true });
+
+      // Câu hỏi đầu tiên tạo conversation TRƯỚC rồi mới hỏi, nên `ask` hỏng vẫn
+      // để lại một conversation rỗng trên server — và backend chưa có
+      // `DELETE /conversations/{id}` để dọn (đã thử, trả 404). Ít nhất kéo lại
+      // danh sách để sidebar phản ánh đúng những gì server đang giữ, thay vì
+      // hiện một mục do lạc quan vẽ ra mà không có nội dung nào.
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.chat.conversations(projectId),
+      });
     },
   });
 

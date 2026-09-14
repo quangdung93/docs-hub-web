@@ -44,9 +44,13 @@ export const chatHandlers = [
   }),
 
   http.post('*/projects/:projectId/conversations', async ({ params, request }) => {
+    // Backend đọc key `scope` khi tạo nhưng trả về dưới tên `active_scope` khi
+    // đọc — mock phải bất đối xứng y hệt, vì một mock "hợp lý hơn" thật sẽ nuốt
+    // mất đúng loại lỗi này (client từng gửi `active_scope` và chỉ lộ trên
+    // production).
     const body = (await request.json().catch(() => ({}))) as {
       title?: string;
-      active_scope?: { mode?: string };
+      scope?: { mode?: string };
     };
     const now = new Date().toISOString();
     const conversation: MockConversation = {
@@ -54,7 +58,7 @@ export const chatHandlers = [
       project_id: String(params.projectId),
       user_id: 'mock-user',
       title: body.title ?? '',
-      active_scope: { mode: body.active_scope?.mode ?? '' },
+      active_scope: { mode: body.scope?.mode ?? '' },
       messages: [],
       created_at: now,
       updated_at: now,

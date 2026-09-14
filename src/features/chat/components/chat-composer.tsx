@@ -25,11 +25,26 @@ export function ChatComposer({
   const send = () => {
     const question = value.trim();
     if (!question || pending) return;
-    // Cleared optimistically so the box feels responsive, and put back if the
-    // send failed — a question lost to a backend outage means retyping it.
+
+    // Xoá ngay cho ô nhập phản hồi tức thì, và trả câu hỏi lại nếu gửi hỏng —
+    // mất câu hỏi vì backend trục trặc nghĩa là phải gõ lại từ đầu.
+    //
+    // Trả lại kèm focus và đặt con trỏ ở cuối: không có bước này thì câu hỏi
+    // hiện ra trong ô mà không ai biết vì sao, trông hệt như Enter không ăn.
+    // Màn hình chat có dòng báo lỗi riêng, nhưng nó nằm tận trên khung hội
+    // thoại nên dễ bị bỏ qua khi mắt đang ở ô nhập.
     setValue('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    void Promise.resolve(onSubmit(question)).catch(() => setValue(question));
+
+    void Promise.resolve(onSubmit(question)).catch(() => {
+      setValue(question);
+      const node = textareaRef.current;
+      if (!node) return;
+      node.focus();
+      node.setSelectionRange(question.length, question.length);
+      node.style.height = 'auto';
+      node.style.height = `${Math.min(node.scrollHeight, 128)}px`;
+    });
   };
 
   return (

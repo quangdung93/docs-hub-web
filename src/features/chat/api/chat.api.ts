@@ -42,7 +42,11 @@ export const chatApi = {
   create: async (projectId: string, title: string, scope: ChatScope): Promise<Conversation> => {
     const { data } = await http.post(endpoints.chat.conversations(projectId), {
       title,
-      active_scope: toScopeDto(scope),
+      // Backend đọc key `scope` khi TẠO (đúng như `http.CreateRequest` trong
+      // Swagger), nhưng trả về dưới tên `active_scope` khi ĐỌC. Gửi nhầm
+      // `active_scope` thì nó bỏ qua, lưu scope rỗng, và mọi câu hỏi sau đó bị
+      // từ chối "Scope không hợp lệ" — kiểm chứng 14/09/2026.
+      scope: toScopeDto(scope),
     });
     return toConversation(apiSuccessSchema(ConversationDtoSchema).parse(data).data);
   },
