@@ -274,6 +274,36 @@ export const vi = {
   // ── Lịch sử thay đổi tài liệu ────────────────────────────────────────────
   'history.tab': 'Lịch sử thay đổi',
   'history.documentsTab': 'Tài liệu',
+
+  // ── Hoàn thiện tài liệu URD ──────────────────────────────────────────────
+  'completeness.tab': 'Hoàn thiện',
+  'completeness.hint':
+    'Mức độ hoàn thiện của tài liệu URD, đo bằng số edge case đã có hướng giải quyết.',
+  'completeness.empty': 'Dự án chưa có tài liệu URD nào để đánh giá.',
+  'completeness.emptyHint': 'Tải lên một tài liệu URD để bắt đầu phân tích edge case.',
+  'completeness.column.document': 'Tài liệu',
+  'completeness.column.state': 'Mức độ hoàn thiện',
+  'completeness.column.action': 'Thao tác',
+  'completeness.notAnalyzed': 'Chưa phân tích',
+  'completeness.analyzing': 'Đang phân tích…',
+  'completeness.reanalyze': 'Phân tích lại',
+  'completeness.caseCount': '{done}/{total} case đã xử lý',
+  'completeness.mockNotice':
+    'Dữ liệu phân tích hiện là mô phỏng — backend chưa có API cho chức năng này.',
+
+  'edgeCase.modalTitle': 'Phân tích Edge Case',
+  'edgeCase.analyzing': 'Đang phân tích nội dung URD…',
+  'edgeCase.analyzingHint': 'So sánh với các mẫu URD tương tự để tìm edge case chưa được đề cập.',
+  'edgeCase.found': 'Tìm thấy {count} edge case chưa được đề cập trong tài liệu.',
+  'edgeCase.foundHint': 'Nhập hướng giải quyết cho từng trường hợp, kèm hình minh hoạ nếu cần.',
+  'edgeCase.resolution': 'Hướng giải quyết',
+  'edgeCase.resolutionPlaceholder': 'Mô tả cách xử lý cho trường hợp này…',
+  'edgeCase.addImage': 'Thêm hình ảnh',
+  'edgeCase.removeImage': 'Bỏ hình ảnh',
+  'edgeCase.imageAttached': 'Đã đính kèm ảnh minh hoạ',
+  'edgeCase.save': 'Lưu hướng giải quyết',
+  'edgeCase.saved': 'Đã lưu {done}/{total} hướng giải quyết cho "{name}".',
+  'edgeCase.noCases': 'Không tìm thấy edge case nào chưa được đề cập. Tài liệu đã đầy đủ.',
   'history.hint':
     'Toàn bộ các lần tải lên / thay thế tệp trong dự án, mới nhất trước.',
   'history.empty': 'Chưa có lần tải lên nào.',

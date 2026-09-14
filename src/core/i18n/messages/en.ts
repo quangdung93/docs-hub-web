@@ -271,6 +271,36 @@ export const en: Record<MessageKey, string> = {
   // ── Document change history ──────────────────────────────────────────────
   'history.tab': 'Change history',
   'history.documentsTab': 'Documents',
+
+  // ── URD completeness ─────────────────────────────────────────────────────
+  'completeness.tab': 'Completeness',
+  'completeness.hint':
+    'How complete each URD is, measured by the edge cases that have a resolution.',
+  'completeness.empty': 'This project has no URD documents to assess yet.',
+  'completeness.emptyHint': 'Upload a URD document to start analysing edge cases.',
+  'completeness.column.document': 'Document',
+  'completeness.column.state': 'Completeness',
+  'completeness.column.action': 'Action',
+  'completeness.notAnalyzed': 'Not analysed',
+  'completeness.analyzing': 'Analysing…',
+  'completeness.reanalyze': 'Re-analyse',
+  'completeness.caseCount': '{done}/{total} cases resolved',
+  'completeness.mockNotice':
+    'Analysis results are simulated — the backend has no API for this yet.',
+
+  'edgeCase.modalTitle': 'Edge case analysis',
+  'edgeCase.analyzing': 'Analysing the URD…',
+  'edgeCase.analyzingHint': 'Comparing against similar URDs to find edge cases left unaddressed.',
+  'edgeCase.found': 'Found {count} edge cases not addressed in this document.',
+  'edgeCase.foundHint': 'Write a resolution for each one, with an illustration if it helps.',
+  'edgeCase.resolution': 'Resolution',
+  'edgeCase.resolutionPlaceholder': 'Describe how this case is handled…',
+  'edgeCase.addImage': 'Add image',
+  'edgeCase.removeImage': 'Remove image',
+  'edgeCase.imageAttached': 'Illustration attached',
+  'edgeCase.save': 'Save resolutions',
+  'edgeCase.saved': 'Saved {done}/{total} resolutions for "{name}".',
+  'edgeCase.noCases': 'No unaddressed edge cases found. This document is complete.',
   'history.hint': 'Every upload and replacement in this project, newest first.',
   'history.empty': 'No uploads yet.',
   'history.revision': 'Rev {no}',
