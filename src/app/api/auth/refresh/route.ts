@@ -33,7 +33,7 @@ export async function POST() {
     return NextResponse.json(failureEnvelope('ERR_REFRESH', 'Session expired'), { status: 401 });
   }
 
-  jar.set(ACCESS_COOKIE, pair.accessToken, accessCookieOptions());
+  jar.set(ACCESS_COOKIE, pair.accessToken, accessCookieOptions(pair.accessToken));
   jar.set(REFRESH_COOKIE, pair.refreshToken, refreshCookieOptions());
   return NextResponse.json(successEnvelope({ ok: true }));
 }

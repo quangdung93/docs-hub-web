@@ -41,7 +41,7 @@ export async function middleware(req: NextRequest) {
   req.cookies.set(ACCESS_COOKIE, pair.accessToken);
   const res = NextResponse.next({ request: { headers: req.headers } });
   // …and persist both to the browser for subsequent requests.
-  res.cookies.set(ACCESS_COOKIE, pair.accessToken, accessCookieOptions());
+  res.cookies.set(ACCESS_COOKIE, pair.accessToken, accessCookieOptions(pair.accessToken));
   res.cookies.set(REFRESH_COOKIE, pair.refreshToken, refreshCookieOptions());
   return res;
 }

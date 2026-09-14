@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
   const { user, token, refresh_token: refreshToken } = parsed.data;
   const jar = await cookies();
-  jar.set(ACCESS_COOKIE, token, accessCookieOptions());
+  jar.set(ACCESS_COOKIE, token, accessCookieOptions(token));
   if (refreshToken) jar.set(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
 
   return NextResponse.json(

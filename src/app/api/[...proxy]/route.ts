@@ -131,6 +131,26 @@ async function handler(req: NextRequest, ctx: { params: Promise<{ proxy: string[
   responseHeaders.delete('content-encoding');
   responseHeaders.delete('content-length');
 
+  /**
+   * Bổ sung charset cho nội dung dạng text.
+   *
+   * Backend trả `Content-Type: text/markdown` không kèm charset, mà lại gửi
+   * `X-Content-Type-Options: nosniff` — nên trình duyệt không được phép tự đoán
+   * và rơi về charset mặc định của hệ thống, làm vỡ tiếng Việt khi mở tài liệu
+   * ở tab mới. Trong modal thì không thấy lỗi vì `response.text()` luôn decode
+   * UTF-8 bất kể header.
+   *
+   * Chỉ thêm cho `text/*` và JSON: các định dạng nhị phân (PDF, DOCX, XLSX)
+   * không có khái niệm charset, gắn vào là sai.
+   */
+  const contentType = responseHeaders.get('content-type');
+  if (contentType && !contentType.includes('charset')) {
+    const mediaType = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
+    if (mediaType.startsWith('text/') || mediaType === 'application/json') {
+      responseHeaders.set('content-type', `${contentType}; charset=utf-8`);
+    }
+  }
+
   const res = new NextResponse(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
@@ -140,7 +160,7 @@ async function handler(req: NextRequest, ctx: { params: Promise<{ proxy: string[
   // Ghi cặp token mới xuống trình duyệt. Backend rotate ở mỗi lần refresh và thu
   // hồi refresh token cũ ngay, nên không lưu lại là lần refresh sau chết.
   if (rotated) {
-    res.cookies.set(ACCESS_COOKIE, rotated.accessToken, accessCookieOptions());
+    res.cookies.set(ACCESS_COOKIE, rotated.accessToken, accessCookieOptions(rotated.accessToken));
     res.cookies.set(REFRESH_COOKIE, rotated.refreshToken, refreshCookieOptions());
   }
 
