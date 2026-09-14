@@ -1,4 +1,3 @@
-export { CompletenessList } from './components/completeness-list';
 export { CreateVersionModal } from './components/create-version-modal';
 export { EdgeCaseModal } from './components/edge-case-modal';
 export { DocumentDetailModal } from './components/document-detail-modal';

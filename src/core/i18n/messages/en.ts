@@ -273,20 +273,10 @@ export const en: Record<MessageKey, string> = {
   'history.documentsTab': 'Documents',
 
   // ── URD completeness ─────────────────────────────────────────────────────
-  'completeness.tab': 'Completeness',
-  'completeness.hint':
-    'How complete each URD is, measured by the edge cases that have a resolution.',
-  'completeness.empty': 'This project has no URD documents to assess yet.',
-  'completeness.emptyHint': 'Upload a URD document to start analysing edge cases.',
-  'completeness.column.document': 'Document',
   'completeness.column.state': 'Completeness',
-  'completeness.column.action': 'Action',
   'completeness.notAnalyzed': 'Not analysed',
-  'completeness.analyzing': 'Analysing…',
   'completeness.reanalyze': 'Re-analyse',
   'completeness.caseCount': '{done}/{total} cases resolved',
-  'completeness.mockNotice':
-    'Analysis results are simulated — the backend has no API for this yet.',
 
   'edgeCase.modalTitle': 'Edge case analysis',
   'edgeCase.analyzing': 'Analysing the URD…',

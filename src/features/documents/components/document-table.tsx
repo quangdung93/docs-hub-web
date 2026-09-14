@@ -1,12 +1,14 @@
 'use client';
 
-import { Download, Eye, FileText, Trash2 } from 'lucide-react';
+import { Download, Eye, FileText, Sparkles, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
 import { formatRelativeTime } from '@/shared/lib/format';
+import { cn } from '@/shared/lib/utils';
 import {
   Badge,
+  Button,
   ConfirmDialog,
   DataTable,
   ErrorState,
@@ -23,15 +25,23 @@ import {
 
 import { documentsApi } from '../api/documents.api';
 import { useDeleteDocument, useDocuments, useVersionLabels } from '../hooks/use-documents';
+import {
+  completenessPercent,
+  completenessTone,
+  isUrdDocument,
+  resolvedCount,
+  type CompletenessResult,
+} from '../services/completeness.service';
 import { formatBytes, matchesFormat } from '../services/upload-queue.service';
-import type { DocumentFormat, DocumentStatus } from '../schemas/document.schema';
+import type { Document, DocumentFormat, DocumentStatus } from '../schemas/document.schema';
 
 import { DocumentDetailModal } from './document-detail-modal';
 import { DocumentPreviewModal } from './document-preview-modal';
 import { DocumentStatusBadge } from './document-status-badge';
+import { EdgeCaseModal } from './edge-case-modal';
 
 const PAGE_SIZE = 6;
-const COLUMN_COUNT = 6;
+const COLUMN_COUNT = 7;
 
 /**
  * Document list with search, status filter, row selection and pagination. Filter
@@ -67,6 +77,10 @@ export function DocumentTable({
    *  retrieval, so it goes through the same gate as the other destructive
    *  actions in the app rather than firing straight off the icon. */
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  /** Tài liệu đang mở modal phân tích edge case. */
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  /** documentId → kết quả phân tích. Không persist: backend chưa có chỗ lưu. */
+  const [completeness, setCompleteness] = useState<Record<string, CompletenessResult>>({});
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -110,6 +124,7 @@ export function DocumentTable({
             <TableHeaderCell>{t('documents.column.version')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.updatedAt')}</TableHeaderCell>
             <TableHeaderCell>{t('documents.column.status')}</TableHeaderCell>
+            <TableHeaderCell>{t('completeness.column.state')}</TableHeaderCell>
             <TableHeaderCell className="text-right">
               {t('documents.column.actions')}
             </TableHeaderCell>
@@ -202,6 +217,14 @@ export function DocumentTable({
                 </TableCell>
 
                 <TableCell>
+                  <CompletenessCell
+                    document={document}
+                    result={completeness[document.id] ?? null}
+                    onOpen={() => setAnalyzingId(document.id)}
+                  />
+                </TableCell>
+
+                <TableCell>
                   <div className="flex items-center justify-end gap-1">
                     {/* A plain link, not a fetch: the response carries
                         `Content-Disposition: attachment` with the real filename,
@@ -262,6 +285,15 @@ export function DocumentTable({
         onClose={() => setOpened(null)}
       />
 
+      <EdgeCaseModal
+        document={(documents ?? []).find((item) => item.id === analyzingId) ?? null}
+        initialResult={analyzingId ? (completeness[analyzingId] ?? null) : null}
+        onClose={() => setAnalyzingId(null)}
+        onSave={(documentId, result) =>
+          setCompleteness((current) => ({ ...current, [documentId]: result }))
+        }
+      />
+
       <ConfirmDialog
         open={pendingDelete !== null}
         title={t('documents.delete.title')}
@@ -292,5 +324,75 @@ export function DocumentTable({
         />
       </div>
     </>
+  );
+}
+
+/**
+ * Ô "Hoàn thiện" của một dòng tài liệu.
+ *
+ * Chỉ tài liệu URD mới có gì để đánh giá — edge case là khái niệm của tài liệu
+ * yêu cầu, một file Excel bảng thuật ngữ thì không. Các dòng còn lại hiện dấu
+ * gạch ngang thay vì nút bấm được, để không mời người dùng vào một việc vô nghĩa.
+ *
+ * Kết quả phân tích hiện là dữ liệu mô phỏng (xem `completeness.service`) và
+ * giữ trong state của bảng, không persist — backend chưa có chỗ lưu.
+ */
+function CompletenessCell({
+  document,
+  result,
+  onOpen,
+}: {
+  document: Document;
+  result: CompletenessResult | null;
+  onOpen: () => void;
+}) {
+  const { t } = useI18n();
+
+  if (!isUrdDocument(document)) {
+    return <span className="text-muted-foreground text-xs">{t('common.emptyValue')}</span>;
+  }
+
+  if (!result) {
+    return (
+      <Button variant="outline" size="sm" onClick={onOpen} className="whitespace-nowrap">
+        <Sparkles aria-hidden />
+        {t('completeness.notAnalyzed')}
+      </Button>
+    );
+  }
+
+  const percent = completenessPercent(result.cases);
+  const tone = completenessTone(percent);
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      title={t('completeness.reanalyze')}
+      className="focus-visible:ring-ring/40 w-36 rounded text-left focus-visible:ring-2 focus-visible:outline-none"
+    >
+      <div className="text-muted-foreground flex items-center justify-between text-xs">
+        <span className="font-semibold">{percent}%</span>
+        <span>
+          {t('completeness.caseCount', {
+            done: resolvedCount(result.cases),
+            total: result.cases.length,
+          })}
+        </span>
+      </div>
+      {/* Thanh vẽ tay thay vì dùng `Progress`: ở đây cần đổi màu theo ngưỡng,
+          mà `Progress` chỉ có một màu brand. */}
+      <div className="bg-muted mt-1 h-1.5 w-full overflow-hidden rounded-full">
+        <div
+          className={cn(
+            'h-full rounded-full transition-[width] duration-500',
+            tone === 'indexed' && 'bg-status-indexed',
+            tone === 'queued' && 'bg-status-queued',
+            tone === 'failed' && 'bg-status-failed'
+          )}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </button>
   );
 }

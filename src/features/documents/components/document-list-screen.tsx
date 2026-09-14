@@ -18,7 +18,6 @@ import {
   type DocumentStatus,
 } from '../schemas/document.schema';
 
-import { CompletenessList } from './completeness-list';
 import { CreateVersionModal } from './create-version-modal';
 import { DocumentHistoryList } from './document-history-list';
 import { DocumentTable } from './document-table';
@@ -27,7 +26,7 @@ import { VersionPickerPill } from './version-picker-pill';
 
 const STATUS_VALUES = ['indexed', 'processing', 'queued', 'failed'] as const;
 
-type Pane = 'files' | 'history' | 'completeness';
+type Pane = 'files' | 'history';
 
 /**
  * "Quản lý dự án" screen — header, filter bar and the document table. Owns the
@@ -141,7 +140,6 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
         items={[
           { value: 'files', label: t('history.documentsTab') },
           { value: 'history', label: t('history.tab') },
-          { value: 'completeness', label: t('completeness.tab') },
         ]}
       />
 
@@ -189,13 +187,9 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
             versionFilter={viewingVersion ?? orderedVersions[0]?.id ?? 'all'}
           />
         </>
-      ) : pane === 'history' ? (
-        <div className="mt-4">
-          <DocumentHistoryList projectId={projectId} />
-        </div>
       ) : (
         <div className="mt-4">
-          <CompletenessList projectId={projectId} />
+          <DocumentHistoryList projectId={projectId} />
         </div>
       )}
 

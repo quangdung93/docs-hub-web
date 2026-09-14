@@ -276,20 +276,10 @@ export const vi = {
   'history.documentsTab': 'Tài liệu',
 
   // ── Hoàn thiện tài liệu URD ──────────────────────────────────────────────
-  'completeness.tab': 'Hoàn thiện',
-  'completeness.hint':
-    'Mức độ hoàn thiện của tài liệu URD, đo bằng số edge case đã có hướng giải quyết.',
-  'completeness.empty': 'Dự án chưa có tài liệu URD nào để đánh giá.',
-  'completeness.emptyHint': 'Tải lên một tài liệu URD để bắt đầu phân tích edge case.',
-  'completeness.column.document': 'Tài liệu',
   'completeness.column.state': 'Mức độ hoàn thiện',
-  'completeness.column.action': 'Thao tác',
   'completeness.notAnalyzed': 'Chưa phân tích',
-  'completeness.analyzing': 'Đang phân tích…',
   'completeness.reanalyze': 'Phân tích lại',
   'completeness.caseCount': '{done}/{total} case đã xử lý',
-  'completeness.mockNotice':
-    'Dữ liệu phân tích hiện là mô phỏng — backend chưa có API cho chức năng này.',
 
   'edgeCase.modalTitle': 'Phân tích Edge Case',
   'edgeCase.analyzing': 'Đang phân tích nội dung URD…',
