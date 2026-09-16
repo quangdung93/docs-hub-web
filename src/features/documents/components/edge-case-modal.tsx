@@ -1,82 +1,97 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ImagePlus, Save, Sparkles, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { AlertCircle, ImagePlus, Loader2, Save, Sparkles, X } from 'lucide-react';
 
-import { useI18n } from '@/core/i18n';
-import { Badge, Button, Modal, Textarea } from '@/shared/ui';
+import { useI18n, type Translate } from '@/core/i18n';
+import { Button, Modal, Textarea } from '@/shared/ui';
 
-import {
-  analyzeDocument,
-  type CompletenessResult,
-  type EdgeCase,
-} from '../services/completeness.service';
+import { urdApi } from '../api/urd.api';
+import { useAnalyzeUrd, useSubmitResolutions } from '../hooks/use-urd';
+import { resolvedCount, type EdgeCase, type UrdAnalysis } from '../services/completeness.service';
 import { type Document } from '../schemas/document.schema';
+
+/** Ảnh minh hoạ tối đa 5 MB — chặn ở client để không tốn một vòng lên server. */
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /**
  * Phân tích edge case cho một tài liệu URD.
  *
  * Hai giai đoạn: chạy phân tích, rồi nhập hướng giải quyết cho từng case tìm
- * được. Giai đoạn đầu có animation vì phân tích thật sẽ mất vài chục giây —
- * một modal đứng im trong ngần ấy thời gian sẽ bị hiểu là treo.
+ * được. Giai đoạn đầu có animation vì phân tích thật mất vài chục giây — một
+ * modal đứng im trong ngần ấy thời gian sẽ bị hiểu là treo.
  *
- * Kết quả phân tích hiện là **dữ liệu mô phỏng** (xem `completeness.service`).
- * Modal vẫn được viết như thể đang gọi API thật: có trạng thái đang chạy, có
- * huỷ giữa chừng, có lưu — để khi endpoint xuất hiện thì chỉ đổi một lời gọi.
+ * Từ 16/09/2026 modal gọi API thật (`urd/analyze`). Backend đòi tài liệu đã được
+ * xác nhận `doc_type=urd` và revision có nguồn canonical; hook lo vế đầu, vế sau
+ * nếu thiếu thì hiện thông báo chứ không quay vòng vô hạn.
  */
 export function EdgeCaseModal({
+  projectId,
   document,
-  initialResult,
   onClose,
-  onSave,
 }: {
+  projectId: string;
   /** Tài liệu đang phân tích. Null nghĩa là modal đóng. */
   document: Document | null;
-  /** Kết quả lần phân tích trước, nếu có — mở lại thì không chạy phân tích nữa. */
-  initialResult: CompletenessResult | null;
   onClose: () => void;
-  onSave: (documentId: string, result: CompletenessResult) => void;
 }) {
   const { t } = useI18n();
-  const [state, setState] = useState<{
-    documentId: string | null;
-    result: CompletenessResult | null;
-  }>({ documentId: document?.id ?? null, result: initialResult });
+  const analyze = useAnalyzeUrd(projectId);
+  const { mutateAsync: analyzeAsync } = analyze;
+  const submit = useSubmitResolutions(projectId);
 
-  // Reset lúc render chứ không trong effect: giá trị này suy ra từ `document`,
-  // và một setState trong effect sẽ render hai lần, chớp qua kết quả của tài
-  // liệu trước dưới tiêu đề của tài liệu mới.
-  if (state.documentId !== (document?.id ?? null)) {
-    setState({ documentId: document?.id ?? null, result: initialResult });
+  // Bản nháp người dùng đang sửa, tách khỏi kết quả server trả về: gõ vào ô
+  // không được ghi thẳng vào cache của TanStack Query.
+  const [draft, setDraft] = useState<{ documentId: string | null; value: UrdAnalysis | null }>({
+    documentId: null,
+    value: null,
+  });
+
+  const documentId = document?.id ?? null;
+
+  // Đổi tài liệu thì bỏ bản nháp cũ. Suy ra lúc render thay vì setState trong
+  // effect, để không chớp qua kết quả của tài liệu trước dưới tiêu đề mới.
+  if (draft.documentId !== documentId) {
+    setDraft({ documentId, value: null });
   }
 
-  // Chỉ effect lo phần bất đồng bộ. `cancelled` chặn setState sau khi modal đã
-  // đóng — người dùng đóng giữa chừng là chuyện thường với thao tác chạy lâu.
+  // Chạy phân tích một lần cho mỗi tài liệu được mở. Phụ thuộc vào `mutateAsync`
+  // chứ không phải cả object mutation: TanStack giữ hàm này ổn định, còn object
+  // thì đổi mỗi lần trạng thái mutation đổi — dùng nó sẽ chạy lại phân tích ngay
+  // khi lần chạy đầu vừa xong.
   useEffect(() => {
-    if (!document || initialResult) return;
+    if (!document) return;
 
     let cancelled = false;
-    void analyzeDocument(document).then((analysed) => {
-      if (!cancelled) setState({ documentId: document.id, result: analysed });
-    });
+    analyzeAsync({
+      documentId: document.id,
+      version: document.version,
+      docType: document.docType,
+    })
+      .then((result) => {
+        if (!cancelled) setDraft({ documentId: document.id, value: result });
+      })
+      .catch(() => {
+        // Lỗi đã nằm trong `analyze.error`; ở đây chỉ cần không set state.
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [document, initialResult]);
+  }, [document, analyzeAsync]);
 
   if (!document) return null;
 
-  const result = state.documentId === document.id ? state.result : null;
+  const result = draft.documentId === document.id ? draft.value : null;
 
   const updateCase = (id: string, patch: Partial<EdgeCase>) =>
-    setState((current) =>
-      current.result
+    setDraft((current) =>
+      current.value
         ? {
             ...current,
-            result: {
-              ...current.result,
-              cases: current.result.cases.map((item) =>
+            value: {
+              ...current.value,
+              cases: current.value.cases.map((item) =>
                 item.id === id ? { ...item, ...patch } : item
               ),
             },
@@ -84,7 +99,28 @@ export function EdgeCaseModal({
         : current
     );
 
-  const resolved = result?.cases.filter((item) => item.resolution.trim()).length ?? 0;
+  const resolved = result ? resolvedCount(result.cases) : 0;
+
+  const save = () => {
+    if (!result) return;
+    submit
+      .mutateAsync({
+        documentId: document.id,
+        analysisId: result.analysis.id,
+        items: result.cases
+          .filter((item) => item.resolution.trim().length > 0)
+          .map((item) => ({
+            caseId: item.id,
+            resolution: item.resolution.trim(),
+            imageObjectKey: item.imageObjectKey,
+          })),
+      })
+      .then(onClose)
+      .catch(() => {
+        // `submit.error` đã hiển thị dưới chân modal; giữ modal mở để không mất
+        // những gì người dùng vừa gõ.
+      });
+  };
 
   return (
     <Modal
@@ -96,27 +132,38 @@ export function EdgeCaseModal({
       footer={
         result && result.cases.length > 0 ? (
           <>
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={submit.isPending}>
               {t('common.cancel')}
             </Button>
-            <Button
-              onClick={() => {
-                onSave(document.id, result);
-                onClose();
-              }}
-            >
-              <Save aria-hidden />
-              {t('edgeCase.save')}
+            <Button onClick={save} disabled={submit.isPending || resolved === 0}>
+              {submit.isPending ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <Save aria-hidden />
+              )}
+              {submit.isPending ? t('edgeCase.saving') : t('edgeCase.save')}
             </Button>
           </>
         ) : undefined
       }
     >
-      {/* Chưa có `result` nghĩa là đang chạy phân tích: state chỉ được điền khi
-          `analyzeDocument` trả về, nên không cần thêm cờ `isAnalyzing` riêng. */}
-      {!result ? (
+      {analyze.isPending ? (
         <AnalyzingStage />
-      ) : result.cases.length === 0 ? (
+      ) : analyze.isError ? (
+        <FailureStage
+          message={analyzeErrorMessage(analyze.error, t)}
+          onRetry={() =>
+            analyzeAsync({
+              documentId: document.id,
+              version: document.version,
+              docType: document.docType,
+            })
+              .then((value) => setDraft({ documentId: document.id, value }))
+              .catch(() => undefined)
+          }
+          retryLabel={t('edgeCase.retry')}
+        />
+      ) : !result ? null : result.cases.length === 0 ? (
         <p className="text-muted-foreground py-12 text-center text-sm">{t('edgeCase.noCases')}</p>
       ) : (
         <div className="max-h-[60vh] overflow-auto">
@@ -131,6 +178,9 @@ export function EdgeCaseModal({
                 key={item.id}
                 index={index}
                 item={item}
+                projectId={projectId}
+                documentId={document.id}
+                analysisId={result.analysis.id}
                 onChange={(patch) => updateCase(item.id, patch)}
               />
             ))}
@@ -139,10 +189,34 @@ export function EdgeCaseModal({
           <p className="text-muted-foreground mt-4 text-xs">
             {t('completeness.caseCount', { done: resolved, total: result.cases.length })}
           </p>
+
+          {submit.isError ? (
+            <p className="text-status-failed mt-2 text-xs">{t('edgeCase.saveFailed')}</p>
+          ) : null}
         </div>
       )}
     </Modal>
   );
+}
+
+/**
+ * Lỗi từ `analyze` gần như luôn là một điều kiện tiên quyết chưa đạt, và thông
+ * báo thô của backend ("Nguồn canonical của revision chưa sẵn sàng") không nói
+ * cho người dùng biết phải làm gì.
+ *
+ * Nhận diện theo `code` trước, chỉ dò chuỗi khi không có code: backend đặt mã
+ * riêng `URD_NOT_CONFIRMED`, còn phần canonical chỉ trả `REQ_400` chung nên vẫn
+ * phải dò văn bản. Sửa lời thông báo bên backend sẽ làm nhánh đó trượt, nhưng
+ * lúc ấy vẫn còn câu báo lỗi chung chứ không vỡ giao diện.
+ */
+export function analyzeErrorMessage(error: unknown, t: Translate): string {
+  const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+  const message =
+    error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
+
+  if (code === 'URD_NOT_CONFIRMED') return t('edgeCase.notConfirmed');
+  if (message.toLowerCase().includes('canonical')) return t('edgeCase.notReady');
+  return t('edgeCase.analyzeFailed');
 }
 
 /**
@@ -177,29 +251,69 @@ function AnalyzingStage() {
   );
 }
 
+function FailureStage({
+  message,
+  onRetry,
+  retryLabel,
+}: {
+  message: string;
+  onRetry: () => void;
+  retryLabel: string;
+}) {
+  return (
+    <div className="py-12 text-center">
+      <div className="bg-status-failed-bg text-status-failed mx-auto grid size-12 place-items-center rounded-full">
+        <AlertCircle className="size-5" aria-hidden />
+      </div>
+      <p className="mx-auto mt-4 max-w-md text-sm">{message}</p>
+      <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
+        {retryLabel}
+      </Button>
+    </div>
+  );
+}
+
 function CaseCard({
   index,
   item,
+  projectId,
+  documentId,
+  analysisId,
   onChange,
 }: {
   index: number;
   item: EdgeCase;
+  projectId: string;
+  documentId: string;
+  analysisId: string;
   onChange: (patch: Partial<EdgeCase>) => void;
 }) {
   const { t } = useI18n();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  const pickImage = (file: File) => {
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError(t('edgeCase.imageTooLarge'));
+      return;
+    }
+    setImageError(null);
+    setUploading(true);
+    urdApi
+      .uploadCaseImage(projectId, documentId, analysisId, item.id, file)
+      .then((key) => onChange({ imageObjectKey: key }))
+      .catch(() => setImageError(t('edgeCase.analyzeFailed')))
+      .finally(() => setUploading(false));
+  };
 
   return (
     <div className="border-border rounded-xl border p-4">
       <div className="flex items-start gap-2.5">
         <span className="bg-status-queued-bg text-status-queued mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold">
-          {index + 1}
+          {item.sequenceNo || index + 1}
         </span>
-        <div className="min-w-0 flex-1">
-          <Badge variant="neutral" className="text-[10px] uppercase">
-            {item.category}
-          </Badge>
-          <p className="mt-1.5 text-sm font-medium">{item.title}</p>
-        </div>
+        <p className="min-w-0 flex-1 text-sm font-medium">{item.description}</p>
       </div>
 
       <div className="mt-3">
@@ -218,17 +332,28 @@ function CaseCard({
         />
       </div>
 
-      {/* Chưa có API lưu file, nên nút này mới chỉ ghi nhận tên ảnh — đủ để thấy
-          luồng, chưa upload đi đâu. Thay bằng Dropzone khi có endpoint. */}
       <div className="mt-2">
-        {item.imageName ? (
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            // Xoá giá trị để chọn lại đúng file vừa bỏ vẫn kích hoạt onChange.
+            event.target.value = '';
+            if (file) pickImage(file);
+          }}
+        />
+
+        {item.imageObjectKey ? (
           <div className="border-border bg-surface-muted/40 flex items-center gap-2 rounded-md border px-2.5 py-1.5">
             <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
-              {item.imageName} · {t('edgeCase.imageAttached')}
+              {t('edgeCase.imageAttached')}
             </span>
             <button
               type="button"
-              onClick={() => onChange({ imageName: null })}
+              onClick={() => onChange({ imageObjectKey: null })}
               aria-label={t('edgeCase.removeImage')}
               className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/40 grid size-5 shrink-0 place-items-center rounded focus-visible:ring-2 focus-visible:outline-none"
             >
@@ -239,12 +364,19 @@ function CaseCard({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onChange({ imageName: `minh_hoa_${index + 1}.png` })}
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
           >
-            <ImagePlus aria-hidden />
-            {t('edgeCase.addImage')}
+            {uploading ? (
+              <Loader2 className="animate-spin" aria-hidden />
+            ) : (
+              <ImagePlus aria-hidden />
+            )}
+            {uploading ? t('edgeCase.uploading') : t('edgeCase.addImage')}
           </Button>
         )}
+
+        {imageError ? <p className="text-status-failed mt-1 text-xs">{imageError}</p> : null}
       </div>
     </div>
   );

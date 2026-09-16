@@ -106,6 +106,7 @@ export function toDocument(dto: DocumentDto, revisions?: readonly RevisionDto[] 
     revisionNo: revision?.revision_no ?? null,
     errorMessage: revision?.error_detail ?? revision?.ragflow_last_error ?? null,
     version: dto.version,
+    docType: dto.doc_type ?? null,
     projectVersionId: revision?.scope?.project_version_id ?? null,
     isDeleted: dto.is_deleted ?? false,
     deletedAt: dto.deleted_at ?? null,

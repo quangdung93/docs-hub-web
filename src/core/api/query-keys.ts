@@ -25,6 +25,15 @@ export const queryKeys = {
       ['documents', 'revision-status', projectId, documentId, revisionId] as const,
   },
 
+  urd: {
+    all: ['urd'] as const,
+    /** Độ hoàn thiện của cả project — nguồn cho cột "Hoàn thiện". */
+    summary: (projectId: string) => ['urd', 'summary', projectId] as const,
+    /** Một lần phân tích, kèm danh sách edge case. */
+    analysis: (projectId: string, documentId: string, analysisId: string) =>
+      ['urd', 'analysis', projectId, documentId, analysisId] as const,
+  },
+
   versions: {
     all: ['versions'] as const,
     list: (projectId: string) => ['versions', 'list', projectId] as const,

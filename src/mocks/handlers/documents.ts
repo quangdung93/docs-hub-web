@@ -203,6 +203,7 @@ export const documentHandlers = [
       revisionNo: 1,
       errorMessage: null,
       version: 1,
+      docType: null,
       isDeleted: false,
       deletedAt: null,
       // Uploads carry the scope the client sent, so the version column and the

@@ -28,16 +28,15 @@ import { useDeleteDocument, useDocuments, useVersionLabels } from '../hooks/use-
 import {
   completenessPercent,
   completenessTone,
-  isUrdDocument,
-  resolvedCount,
-  type CompletenessResult,
+  type UrdSummary,
 } from '../services/completeness.service';
 import { formatBytes, matchesFormat } from '../services/upload-queue.service';
-import type { Document, DocumentFormat, DocumentStatus } from '../schemas/document.schema';
+import type { DocumentFormat, DocumentStatus } from '../schemas/document.schema';
 
 import { DocumentDetailModal } from './document-detail-modal';
 import { DocumentPreviewModal } from './document-preview-modal';
 import { DocumentStatusBadge } from './document-status-badge';
+import { useUrdSummary } from '../hooks/use-urd';
 import { EdgeCaseModal } from './edge-case-modal';
 
 const PAGE_SIZE = 6;
@@ -79,8 +78,8 @@ export function DocumentTable({
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   /** Tài liệu đang mở modal phân tích edge case. */
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-  /** documentId → kết quả phân tích. Không persist: backend chưa có chỗ lưu. */
-  const [completeness, setCompleteness] = useState<Record<string, CompletenessResult>>({});
+  /** documentId → độ hoàn thiện, lấy một lần cho cả bảng từ `urd-summary`. */
+  const { data: urdSummary } = useUrdSummary(projectId);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -218,8 +217,7 @@ export function DocumentTable({
 
                 <TableCell>
                   <CompletenessCell
-                    document={document}
-                    result={completeness[document.id] ?? null}
+                    summary={urdSummary?.get(document.id) ?? null}
                     onOpen={() => setAnalyzingId(document.id)}
                   />
                 </TableCell>
@@ -286,12 +284,9 @@ export function DocumentTable({
       />
 
       <EdgeCaseModal
+        projectId={projectId}
         document={(documents ?? []).find((item) => item.id === analyzingId) ?? null}
-        initialResult={analyzingId ? (completeness[analyzingId] ?? null) : null}
         onClose={() => setAnalyzingId(null)}
-        onSave={(documentId, result) =>
-          setCompleteness((current) => ({ ...current, [documentId]: result }))
-        }
       />
 
       <ConfirmDialog
@@ -330,29 +325,21 @@ export function DocumentTable({
 /**
  * Ô "Hoàn thiện" của một dòng tài liệu.
  *
- * Chỉ tài liệu URD mới có gì để đánh giá — edge case là khái niệm của tài liệu
- * yêu cầu, một file Excel bảng thuật ngữ thì không. Các dòng còn lại hiện dấu
- * gạch ngang thay vì nút bấm được, để không mời người dùng vào một việc vô nghĩa.
+ * Số liệu lấy từ `documents/urd-summary` — một lời gọi cho cả bảng, nên thêm cột
+ * này không làm mỗi dòng phát sinh một request.
  *
- * Kết quả phân tích hiện là dữ liệu mô phỏng (xem `completeness.service`) và
- * giữ trong state của bảng, không persist — backend chưa có chỗ lưu.
+ * Dòng chưa có trong tóm tắt nghĩa là chưa từng phân tích, và vẫn bấm được:
+ * điều kiện để phân tích (đã xác nhận `doc_type=urd`, revision có nguồn
+ * canonical) do backend giữ, client không đoán lại bằng tên file. Đoán sai theo
+ * hướng chặn thì người dùng mất hẳn lối vào tính năng.
  */
-function CompletenessCell({
-  document,
-  result,
-  onOpen,
-}: {
-  document: Document;
-  result: CompletenessResult | null;
-  onOpen: () => void;
-}) {
+function CompletenessCell({ summary, onOpen }: { summary: UrdSummary | null; onOpen: () => void }) {
   const { t } = useI18n();
 
-  if (!isUrdDocument(document)) {
-    return <span className="text-muted-foreground text-xs">{t('common.emptyValue')}</span>;
-  }
-
-  if (!result) {
+  // Chưa từng phân tích: vẫn cho bấm. Tài liệu nào phân tích được là do backend
+  // quyết (`doc_type`, nguồn canonical), nên client không đoán trước bằng tên
+  // file nữa — đoán sai theo hướng chặn thì người dùng không có cách nào mở ra.
+  if (!summary) {
     return (
       <Button variant="outline" size="sm" onClick={onOpen} className="whitespace-nowrap">
         <Sparkles aria-hidden />
@@ -361,7 +348,7 @@ function CompletenessCell({
     );
   }
 
-  const percent = completenessPercent(result.cases);
+  const percent = completenessPercent(summary.totalCases, summary.resolvedCases);
   const tone = completenessTone(percent);
 
   return (
@@ -375,8 +362,8 @@ function CompletenessCell({
         <span className="font-semibold">{percent}%</span>
         <span>
           {t('completeness.caseCount', {
-            done: resolvedCount(result.cases),
-            total: result.cases.length,
+            done: summary.resolvedCases,
+            total: summary.totalCases,
           })}
         </span>
       </div>

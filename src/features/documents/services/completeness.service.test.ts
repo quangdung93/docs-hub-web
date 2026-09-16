@@ -1,60 +1,43 @@
 /**
- * Self-check cho phần đo độ hoàn thiện URD. Chạy bằng
+ * Self-check cho phần tính độ hoàn thiện URD. Chạy bằng
  * `npx tsx src/features/documents/services/completeness.service.test.ts`.
+ *
+ * Trọng tâm là ánh xạ DTO → model miền: backend để gần như mọi trường ở dạng
+ * nullable, nên chỗ dễ vỡ nhất là một `null` lọt vào phép chia hoặc vào UI.
  */
 import assert from 'node:assert/strict';
 
 import {
-  analyzeDocument,
   completenessPercent,
   completenessTone,
-  isUrdDocument,
   resolvedCount,
+  toAnalysis,
+  toUrdSummary,
   type EdgeCase,
 } from './completeness.service';
 
 const makeCase = (resolution: string): EdgeCase => ({
-  id: `c-${resolution.length}-${Math.random()}`,
-  category: 'Xác thực',
-  title: 'Trường hợp thử',
+  id: Math.random().toString(36).slice(2),
+  description: 'mô tả',
+  sequenceNo: 1,
   resolution,
-  imageName: null,
+  imageObjectKey: null,
 });
 
-// ── Nhận diện URD ───────────────────────────────────────────────────────────
-assert.equal(isUrdDocument({ name: 'URD_QuyTrinhKYC_v1.0.docx', fileName: null }), true);
-assert.equal(isUrdDocument({ name: 'urd-mbx26-v1.8.md', fileName: null }), true);
-assert.equal(
-  isUrdDocument({ name: 'Tài liệu User Requirement', fileName: null }),
-  true,
-  'bắt cả cách viết đầy đủ, không chỉ viết tắt'
-);
-// Tên hiển thị không có dấu hiệu nhưng tên file thì có — vẫn phải bắt được.
-assert.equal(isUrdDocument({ name: 'Tài liệu nghiệp vụ', fileName: 'URD_v2.docx' }), true);
+// ── completenessPercent ────────────────────────────────────────────────────
+assert.equal(completenessPercent(0, 0), 100, 'không có case nào nghĩa là không thiếu gì');
+assert.equal(completenessPercent(2, 0), 0);
+assert.equal(completenessPercent(2, 1), 50);
+assert.equal(completenessPercent(3, 3), 100);
+// Tổng âm là dữ liệu hỏng; vẫn phải cho ra số hợp lệ chứ không phải NaN.
+assert.equal(completenessPercent(-1, 0), 100);
 
-assert.equal(isUrdDocument({ name: 'BRD-MBX26-v1.0.docx', fileName: null }), false);
-assert.equal(
-  isUrdDocument({ name: 'Absurdity_report.pdf', fileName: null }),
-  false,
-  '"urd" nằm giữa một từ khác thì không tính — đây là lý do dùng \\b'
-);
-
-// ── Phần trăm hoàn thiện ────────────────────────────────────────────────────
-assert.equal(completenessPercent([]), 100, 'không có case nào nghĩa là không thiếu gì');
-assert.equal(completenessPercent([makeCase(''), makeCase('')]), 0);
-assert.equal(completenessPercent([makeCase('đã xử lý'), makeCase('')]), 50);
-assert.equal(completenessPercent([makeCase('a'), makeCase('b'), makeCase('c')]), 100);
-assert.equal(
-  completenessPercent([makeCase('   '), makeCase('thật')]),
-  50,
-  'chuỗi toàn khoảng trắng không tính là đã giải quyết'
-);
-
-// ── Đếm số case đã xử lý ────────────────────────────────────────────────────
+// ── resolvedCount: chỉ khoảng trắng không tính là đã giải quyết ─────────────
 assert.equal(resolvedCount([makeCase('x'), makeCase(''), makeCase('y')]), 2);
+assert.equal(resolvedCount([makeCase('   '), makeCase('thật')]), 1);
 assert.equal(resolvedCount([]), 0);
 
-// ── Ngưỡng màu ──────────────────────────────────────────────────────────────
+// ── completenessTone: đúng ngưỡng ───────────────────────────────────────────
 assert.equal(completenessTone(100), 'indexed');
 assert.equal(completenessTone(80), 'indexed', 'đúng ngưỡng 80 là xanh');
 assert.equal(completenessTone(79), 'queued');
@@ -62,24 +45,50 @@ assert.equal(completenessTone(50), 'queued', 'đúng ngưỡng 50 là vàng');
 assert.equal(completenessTone(49), 'failed');
 assert.equal(completenessTone(0), 'failed');
 
-// ── Phân tích mô phỏng ──────────────────────────────────────────────────────
-const doc = { id: 'd1', name: 'URD_Test.docx', fileName: 'URD_Test.docx' };
-const first = await analyzeDocument(doc, { delayMs: 0 });
-const second = await analyzeDocument(doc, { delayMs: 0 });
+// ── toAnalysis: mọi trường nullable đều phải có giá trị thay thế ────────────
+const mapped = toAnalysis({
+  analysis: {
+    id: 'a1',
+    document_id: 'd1',
+    status: 'ready',
+    total_cases: null,
+    resolved_cases: null,
+    revision_id: null,
+    created_by: null,
+    error_code: null,
+    error_detail: null,
+    created_at: null,
+    updated_at: null,
+  },
+  cases: null,
+});
+assert.equal(mapped.analysis.totalCases, 0, 'total_cases null → 0, không để undefined lọt vào UI');
+assert.equal(mapped.analysis.resolvedCases, 0);
+assert.deepEqual(mapped.cases, [], 'cases null → mảng rỗng để component map được ngay');
 
-assert.ok(first.cases.length >= 3, 'luôn trả ít nhất 3 case');
-assert.equal(
-  first.cases.length,
-  second.cases.length,
-  'cùng một tài liệu phải ra cùng số case — số nhảy mỗi lần bấm sẽ lộ là dữ liệu giả'
-);
-assert.ok(
-  first.cases.every((item) => item.resolution === '' && item.imageName === null),
-  'case mới chưa có hướng giải quyết nào'
-);
-assert.ok(
-  new Set(first.cases.map((item) => item.id)).size === first.cases.length,
-  'id phải khác nhau, nếu không React sẽ render nhầm khi sửa một ô'
-);
+// `sequence_no` vắng mặt thì đánh số theo vị trí, nếu không cả danh sách hiện số 0.
+const ordered = toAnalysis({
+  analysis: { id: 'a2', document_id: 'd2', status: 'ready' },
+  cases: [
+    { id: 'c1', description: null, sequence_no: null, resolution: null, resolved: null },
+    { id: 'c2', description: 'hai', sequence_no: 7, resolution: 'xong', resolved: true },
+  ],
+});
+assert.equal(ordered.cases[0]!.sequenceNo, 1, 'thiếu sequence_no thì lấy theo vị trí');
+assert.equal(ordered.cases[0]!.description, '');
+assert.equal(ordered.cases[0]!.resolution, '');
+assert.equal(ordered.cases[1]!.sequenceNo, 7, 'có sequence_no thì giữ nguyên của backend');
 
-console.log('completeness.service: all assertions passed');
+// ── toUrdSummary ───────────────────────────────────────────────────────────
+const summary = toUrdSummary({
+  document_id: 'd3',
+  analysis_id: null,
+  status: null,
+  total_cases: null,
+  resolved_cases: null,
+});
+assert.equal(summary.totalCases, 0);
+assert.equal(summary.analysisId, null);
+assert.equal(completenessPercent(summary.totalCases, summary.resolvedCases), 100);
+
+console.log('completeness: all assertions passed');

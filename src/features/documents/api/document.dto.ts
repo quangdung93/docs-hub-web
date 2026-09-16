@@ -30,6 +30,12 @@ export const DocumentDtoSchema = z.object({
   /** Optimistic-locking counter — PATCH echoes it back and rejects a stale one. */
   version: z.number().int(),
   /**
+   * Loại tài liệu do backend xác nhận, hiện chỉ có `urd`. Vắng mặt cho tới khi
+   * gọi `PATCH /doc-type`; đây là căn cứ duy nhất để biết một tài liệu có phân
+   * tích edge case được hay không.
+   */
+  doc_type: z.string().nullish(),
+  /**
    * Xóa mềm. Chỉ xuất hiện khi list được gọi kèm `include_deleted=true`; mặc
    * định backend lọc hẳn các bản ghi này ra nên hai trường dưới vắng mặt.
    */

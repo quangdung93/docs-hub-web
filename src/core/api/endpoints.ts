@@ -80,6 +80,37 @@ export const endpoints = {
     uatReport: (projectId: string) => `${INTERNAL}/projects/${projectId}/documents/uat-report`,
     revisionView: (projectId: string, documentId: string, revisionId: string) =>
       `${INTERNAL}/projects/${projectId}/documents/${documentId}/revisions/${revisionId}/view`,
+
+    /**
+     * Xác nhận một tài liệu là URD. Bắt buộc trước khi phân tích edge case:
+     * `urd/analyze` trả `URD_NOT_CONFIRMED` nếu chưa gọi. Backend tự phân loại
+     * chứ không đoán theo tên file, và mỗi lần gọi làm `version` tăng một bậc.
+     */
+    confirmDocType: (projectId: string, documentId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/doc-type`,
+
+    /** Độ hoàn thiện URD của mọi tài liệu trong project — một lần gọi cho cả bảng. */
+    urdSummary: (projectId: string) => `${INTERNAL}/projects/${projectId}/documents/urd-summary`,
+  },
+
+  /**
+   * Phân tích edge case cho tài liệu URD, lên Swagger 16/09/2026 — thay cho phần
+   * mô phỏng trong `completeness.service`.
+   *
+   * Điều kiện tiên quyết mà API bắt: tài liệu phải được xác nhận `doc_type=urd`
+   * (`confirmDocType`), và revision phải có nguồn canonical sẵn sàng. Thiếu vế
+   * sau thì trả `REQ_400 "Nguồn canonical của revision chưa sẵn sàng"` —
+   * kiểm chứng 16/09/2026 trên mọi tài liệu đã tồn tại.
+   */
+  urd: {
+    analyze: (projectId: string, documentId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/urd/analyze`,
+    analysis: (projectId: string, documentId: string, analysisId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/urd/analyses/${analysisId}`,
+    resolutions: (projectId: string, documentId: string, analysisId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/urd/analyses/${analysisId}/resolutions`,
+    caseImage: (projectId: string, documentId: string, analysisId: string, caseId: string) =>
+      `${INTERNAL}/projects/${projectId}/documents/${documentId}/urd/analyses/${analysisId}/cases/${caseId}/image`,
   },
 
   /**

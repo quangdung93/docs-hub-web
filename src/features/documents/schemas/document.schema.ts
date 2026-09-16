@@ -59,6 +59,11 @@ export const DocumentSchema = z.object({
   /** Optimistic-locking counter; PATCH must echo the value it last read. */
   version: z.number().int(),
   /**
+   * Loại tài liệu backend đã xác nhận (`urd`, hoặc null khi chưa xác nhận).
+   * Cột "Hoàn thiện" dựa vào trường này chứ không đoán theo tên file nữa.
+   */
+  docType: z.string().nullable(),
+  /**
    * Project version the newest revision was uploaded into, from
    * `revision.scope.project_version_id`. Null when the revision carries no scope
    * (older rows) or the list response omitted revisions entirely — the table
