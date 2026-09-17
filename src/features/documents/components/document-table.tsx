@@ -79,8 +79,15 @@ export function DocumentTable({
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   /** Tài liệu đang mở modal phân tích edge case. */
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  /**
+   * Còn tài liệu nào đang chạy pipeline ingest không. Bật polling cho cả hai
+   * truy vấn vẽ nên một hàng, để trạng thái và ô "Hoàn thiện" không lệch nhịp.
+   */
+  const hasPending = (documents ?? []).some(
+    (item) => item.status === 'processing' || item.status === 'queued'
+  );
   /** documentId → độ hoàn thiện, lấy một lần cho cả bảng từ `urd-summary`. */
-  const { data: urdSummary } = useUrdSummary(projectId);
+  const { data: urdSummary } = useUrdSummary(projectId, hasPending);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();

@@ -18,6 +18,30 @@ export const documentListQueryOptions = (projectId: string, params: DocumentList
     queryKey: queryKeys.documents.list(projectId, params),
     queryFn: ({ signal }) => documentsApi.list(projectId, params, signal),
     staleTime: 15_000,
+    /**
+     * Tự làm mới khi còn tài liệu đang chạy pipeline ingest.
+     *
+     * Ingest mất từ vài chục giây tới vài phút, và người dùng thường đứng luôn ở
+     * bảng này chờ. Không có polling thì "Đang xử lý" nằm đó vĩnh viễn cho tới
+     * khi họ tự F5 — mà không có gì trên màn hình gợi ý là phải F5.
+     *
+     * Chỉ chạy khi thực sự có dòng chưa xong: bảng toàn tài liệu đã lập chỉ mục
+     * thì dừng hẳn, không tạo request nền vô ích. `failed` cũng coi là xong —
+     * pipeline đã dừng, đợi thêm không đổi được gì.
+     *
+     * Nhịp 10 giây chứ không phải 5: `list` đang là N+1 (một lời gọi danh sách
+     * rồi mỗi dòng một lời gọi chi tiết, vì `GET /documents` không trả revision
+     * kèm theo), nên một vòng làm mới bảng 9 dòng tốn 10 request. Ingest mất
+     * hàng chục giây tới vài phút, chờ thêm 5 giây không ai thấy khác biệt,
+     * trong khi số request giảm một nửa. Rút xuống khi nào backend trả revision
+     * inline — xem `docs/api-gaps.md`.
+     */
+    refetchInterval: (query) =>
+      query.state.data?.some(
+        (document) => document.status === 'processing' || document.status === 'queued'
+      )
+        ? 10_000
+        : false,
   });
 
 export function useDocuments(projectId: string, params: DocumentListParams = {}) {

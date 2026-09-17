@@ -27,16 +27,24 @@ export function activeAnalysisId(error: unknown): string | null {
  * `documents/urd-summary`. Trả về map theo `documentId` để mỗi dòng tra cứu
  * bằng khóa thay vì quét mảng.
  */
-export const urdSummaryQueryOptions = (projectId: string) =>
+export const urdSummaryQueryOptions = (projectId: string, hasPending = false) =>
   queryOptions({
     queryKey: queryKeys.urd.summary(projectId),
     queryFn: ({ signal }) => urdApi.summary(projectId, signal),
-    staleTime: 30_000,
+    // Cùng nhịp với danh sách tài liệu khi còn dòng đang xử lý. Hai truy vấn này
+    // vẽ chung một hàng: để riêng nhịp thì trạng thái đã đổi sang "Đã lập chỉ
+    // mục" mà ô "Hoàn thiện" vẫn trống thêm vài chục giây nữa, trông như hỏng.
+    staleTime: hasPending ? 0 : 30_000,
+    refetchInterval: hasPending ? 10_000 : false,
     select: (items: UrdSummary[]) => new Map(items.map((item) => [item.documentId, item] as const)),
   });
 
-export function useUrdSummary(projectId: string) {
-  return useQuery(urdSummaryQueryOptions(projectId));
+/**
+ * @param hasPending còn tài liệu đang chạy ingest hay không — bật polling cho
+ * khớp nhịp với danh sách tài liệu.
+ */
+export function useUrdSummary(projectId: string, hasPending = false) {
+  return useQuery(urdSummaryQueryOptions(projectId, hasPending));
 }
 
 /**
