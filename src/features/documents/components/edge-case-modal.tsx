@@ -96,20 +96,26 @@ export function EdgeCaseModal({
   // Bản nháp đang sửa được ưu tiên; chưa gõ gì thì lấy bản server trả về.
   const result = draft.documentId === document.id ? (draft.value ?? existing.data ?? null) : null;
 
+  /**
+   * Sửa một case trong bản nháp.
+   *
+   * Khi mở lại một phân tích đã có, bản nháp còn rỗng và dữ liệu đang hiển thị
+   * là của `existing.data`. Lần gõ đầu tiên vì thế phải *gieo* bản nháp từ dữ
+   * liệu server rồi mới áp thay đổi — bỏ qua như trước thì mọi ký tự gõ vào ô
+   * chưa có nội dung đều bị nuốt, ô nhìn như bị khoá.
+   */
   const updateCase = (id: string, patch: Partial<EdgeCase>) =>
-    setDraft((current) =>
-      current.value
-        ? {
-            ...current,
-            value: {
-              ...current.value,
-              cases: current.value.cases.map((item) =>
-                item.id === id ? { ...item, ...patch } : item
-              ),
-            },
-          }
-        : current
-    );
+    setDraft((current) => {
+      const base = current.value ?? existing.data;
+      if (!base) return current;
+      return {
+        documentId: current.documentId,
+        value: {
+          ...base,
+          cases: base.cases.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+        },
+      };
+    });
 
   const resolved = result ? resolvedCount(result.cases) : 0;
 
