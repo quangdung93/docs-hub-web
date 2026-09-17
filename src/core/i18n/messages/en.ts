@@ -298,6 +298,8 @@ export const en: Record<MessageKey, string> = {
   'edgeCase.uploading': 'Uploading image…',
   'completeness.analyze': 'Analyse',
   'edgeCase.notConfirmed': 'This document has not been confirmed as a URD yet. Retry to confirm and analyse it.',
+  'edgeCase.reopening': 'Reopening the analysis…',
+  'completeness.continue': 'Continue',
   'edgeCase.save': 'Save resolutions',
   'edgeCase.saved': 'Saved {done}/{total} resolutions for "{name}".',
   'edgeCase.noCases': 'No unaddressed edge cases found. This document is complete.',

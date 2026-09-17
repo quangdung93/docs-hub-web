@@ -8,6 +8,19 @@ import { urdApi } from '../api/urd.api';
 import { type UrdSummary } from '../services/completeness.service';
 
 /**
+ * `analysis_id` của lần phân tích đang dở, lấy từ lỗi `URD_ANALYSIS_ACTIVE`.
+ * Trả null cho mọi lỗi khác để nơi gọi ném tiếp.
+ */
+export function activeAnalysisId(error: unknown): string | null {
+  if (!error || typeof error !== 'object') return null;
+  if (!('code' in error) || error.code !== 'URD_ANALYSIS_ACTIVE') return null;
+  const details = 'details' in error ? error.details : null;
+  if (!details || typeof details !== 'object') return null;
+  const id = (details as Record<string, unknown>).analysis_id;
+  return typeof id === 'string' && id.length > 0 ? id : null;
+}
+
+/**
  * Độ hoàn thiện URD của cả project.
  *
  * Một lời gọi cho toàn bảng thay vì mỗi dòng một lời gọi — backend đã gom sẵn ở
@@ -42,7 +55,18 @@ export function useAnalyzeUrd(projectId: string) {
       if (input.docType !== 'urd') {
         await urdApi.confirmUrd(projectId, input.documentId, input.version);
       }
-      return urdApi.analyze(projectId, input.documentId);
+
+      try {
+        return await urdApi.analyze(projectId, input.documentId);
+      } catch (error) {
+        // Tài liệu đang có phân tích dở dang: backend từ chối tạo lần chạy mới
+        // và đưa luôn `analysis_id` trong `details`. Mở lại lần đó thay vì báo
+        // lỗi — người dùng bấm "Phân tích" là muốn làm tiếp, không phải muốn
+        // xoá công sức đã nhập.
+        const active = activeAnalysisId(error);
+        if (!active) throw error;
+        return urdApi.detail(projectId, input.documentId, active);
+      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.urd.summary(projectId) });
@@ -51,13 +75,19 @@ export function useAnalyzeUrd(projectId: string) {
   });
 }
 
-/** Mở lại một lần phân tích đã chạy trước đó. */
+/**
+ * Mở lại một lần phân tích đã chạy trước đó.
+ *
+ * `staleTime: 0` chứ không phải `Infinity`: người dùng làm nhiều đợt (giải quyết
+ * vài case, đóng, hôm sau mở lại), nên mỗi lần mở phải đọc lại server thay vì
+ * lấy bản cache có thể đã cũ hơn những gì chính họ vừa lưu ở máy khác.
+ */
 export function useUrdAnalysis(projectId: string, documentId: string, analysisId: string | null) {
   return useQuery({
     queryKey: queryKeys.urd.analysis(projectId, documentId, analysisId ?? 'none'),
     queryFn: ({ signal }) => urdApi.detail(projectId, documentId, analysisId!, signal),
     enabled: Boolean(analysisId),
-    staleTime: Infinity,
+    staleTime: 0,
   });
 }
 

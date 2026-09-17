@@ -72,10 +72,29 @@ export const urdHandlers = [
       });
     }
 
+    const analysisId = `analysis-${documentId}`;
+
+    // Đã có phân tích chưa hoàn tất: backend thật từ chối tạo lần chạy mới và
+    // đưa `analysis_id` trong `details` để client mở lại. Giữ đúng hành vi đó,
+    // vì đây chính là chỗ từng làm vỡ giao diện.
+    const active = analyses.get(analysisId);
+    if (active && active.cases.some((c) => !c.resolved)) {
+      return HttpResponse.json({
+        success: false,
+        data: null,
+        error: {
+          code: 'URD_ANALYSIS_ACTIVE',
+          message: 'Tài liệu đang có phân tích edge case chưa hoàn tất',
+          details: { analysis_id: analysisId },
+          retryable: false,
+        },
+        meta: { request_id: 'mock', trace_id: '', timestamp: new Date().toISOString() },
+      });
+    }
+
     // Trễ để trạng thái "đang phân tích" quan sát được bằng mắt.
     await delay(1800);
 
-    const analysisId = `analysis-${documentId}`;
     const existing = analyses.get(analysisId);
     if (!existing) {
       analyses.set(analysisId, {

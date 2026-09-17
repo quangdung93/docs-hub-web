@@ -301,6 +301,8 @@ export const vi = {
   'edgeCase.uploading': 'Đang tải ảnh…',
   'completeness.analyze': 'Phân tích',
   'edgeCase.notConfirmed': 'Tài liệu chưa được xác nhận là URD. Thử lại để hệ thống xác nhận và phân tích.',
+  'edgeCase.reopening': 'Đang mở lại phân tích…',
+  'completeness.continue': 'Làm tiếp',
   'edgeCase.save': 'Lưu hướng giải quyết',
   'edgeCase.saved': 'Đã lưu {done}/{total} hướng giải quyết cho "{name}".',
   'edgeCase.noCases': 'Không tìm thấy edge case nào chưa được đề cập. Tài liệu đã đầy đủ.',

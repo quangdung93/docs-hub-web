@@ -7,7 +7,7 @@ import { useI18n, type Translate } from '@/core/i18n';
 import { Button, Modal, Textarea } from '@/shared/ui';
 
 import { urdApi } from '../api/urd.api';
-import { useAnalyzeUrd, useSubmitResolutions } from '../hooks/use-urd';
+import { useAnalyzeUrd, useSubmitResolutions, useUrdAnalysis } from '../hooks/use-urd';
 import { resolvedCount, type EdgeCase, type UrdAnalysis } from '../services/completeness.service';
 import { type Document } from '../schemas/document.schema';
 
@@ -28,17 +28,25 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export function EdgeCaseModal({
   projectId,
   document,
+  analysisId,
   onClose,
 }: {
   projectId: string;
   /** Tài liệu đang phân tích. Null nghĩa là modal đóng. */
   document: Document | null;
+  /**
+   * Lần phân tích đã có của tài liệu này, lấy từ `urd-summary`. Có giá trị thì
+   * mở lại nó; null nghĩa là chưa từng phân tích và sẽ chạy lần đầu.
+   */
+  analysisId: string | null;
   onClose: () => void;
 }) {
   const { t } = useI18n();
   const analyze = useAnalyzeUrd(projectId);
   const { mutateAsync: analyzeAsync } = analyze;
   const submit = useSubmitResolutions(projectId);
+  // Đã có lần phân tích trước thì đọc lại, không chạy phân tích mới.
+  const existing = useUrdAnalysis(projectId, document?.id ?? '', analysisId);
 
   // Bản nháp người dùng đang sửa, tách khỏi kết quả server trả về: gõ vào ô
   // không được ghi thẳng vào cache của TanStack Query.
@@ -55,12 +63,15 @@ export function EdgeCaseModal({
     setDraft({ documentId, value: null });
   }
 
-  // Chạy phân tích một lần cho mỗi tài liệu được mở. Phụ thuộc vào `mutateAsync`
-  // chứ không phải cả object mutation: TanStack giữ hàm này ổn định, còn object
-  // thì đổi mỗi lần trạng thái mutation đổi — dùng nó sẽ chạy lại phân tích ngay
-  // khi lần chạy đầu vừa xong.
+  // Chỉ chạy phân tích khi tài liệu CHƯA có lần phân tích nào. Đã có thì
+  // `useUrdAnalysis` ở trên đọc lại, vì gọi `analyze` lúc đó bị backend từ chối
+  // bằng `URD_ANALYSIS_ACTIVE`.
+  //
+  // Phụ thuộc vào `mutateAsync` chứ không phải cả object mutation: TanStack giữ
+  // hàm này ổn định, còn object thì đổi mỗi lần trạng thái mutation đổi — dùng
+  // nó sẽ chạy lại phân tích ngay khi lần chạy đầu vừa xong.
   useEffect(() => {
-    if (!document) return;
+    if (!document || analysisId) return;
 
     let cancelled = false;
     analyzeAsync({
@@ -78,11 +89,12 @@ export function EdgeCaseModal({
     return () => {
       cancelled = true;
     };
-  }, [document, analyzeAsync]);
+  }, [document, analysisId, analyzeAsync]);
 
   if (!document) return null;
 
-  const result = draft.documentId === document.id ? draft.value : null;
+  // Bản nháp đang sửa được ưu tiên; chưa gõ gì thì lấy bản server trả về.
+  const result = draft.documentId === document.id ? (draft.value ?? existing.data ?? null) : null;
 
   const updateCase = (id: string, patch: Partial<EdgeCase>) =>
     setDraft((current) =>
@@ -107,13 +119,14 @@ export function EdgeCaseModal({
       .mutateAsync({
         documentId: document.id,
         analysisId: result.analysis.id,
-        items: result.cases
-          .filter((item) => item.resolution.trim().length > 0)
-          .map((item) => ({
-            caseId: item.id,
-            resolution: item.resolution.trim(),
-            imageObjectKey: item.imageObjectKey,
-          })),
+        // Chỉ gửi case thực sự đổi so với bản server đang giữ. Backend cộng
+        // dồn qua nhiều lần lưu, nên gửi lại nguyên si những case cũ vừa thừa
+        // vừa ghi đè công sức người khác nhập trong lúc modal đang mở.
+        items: changedCases(result.cases, existing.data?.cases).map((item) => ({
+          caseId: item.id,
+          resolution: item.resolution.trim(),
+          imageObjectKey: item.imageObjectKey,
+        })),
       })
       .then(onClose)
       .catch(() => {
@@ -135,7 +148,12 @@ export function EdgeCaseModal({
             <Button variant="outline" onClick={onClose} disabled={submit.isPending}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={save} disabled={submit.isPending || resolved === 0}>
+            <Button
+              onClick={save}
+              disabled={
+                submit.isPending || changedCases(result.cases, existing.data?.cases).length === 0
+              }
+            >
               {submit.isPending ? (
                 <Loader2 className="animate-spin" aria-hidden />
               ) : (
@@ -149,18 +167,24 @@ export function EdgeCaseModal({
     >
       {analyze.isPending ? (
         <AnalyzingStage />
-      ) : analyze.isError ? (
+      ) : existing.isPending ? (
+        <ReopeningStage />
+      ) : analyze.isError || existing.isError ? (
         <FailureStage
-          message={analyzeErrorMessage(analyze.error, t)}
-          onRetry={() =>
-            analyzeAsync({
+          message={analyzeErrorMessage(analyze.error ?? existing.error, t)}
+          onRetry={() => {
+            if (analysisId) {
+              void existing.refetch();
+              return;
+            }
+            void analyzeAsync({
               documentId: document.id,
               version: document.version,
               docType: document.docType,
             })
               .then((value) => setDraft({ documentId: document.id, value }))
-              .catch(() => undefined)
-          }
+              .catch(() => undefined);
+          }}
           retryLabel={t('edgeCase.retry')}
         />
       ) : !result ? null : result.cases.length === 0 ? (
@@ -197,6 +221,29 @@ export function EdgeCaseModal({
       )}
     </Modal>
   );
+}
+
+/**
+ * Những case người dùng đã sửa so với bản server đang giữ.
+ *
+ * So cả `resolution` lẫn ảnh: đổi mỗi ảnh mà không đổi chữ vẫn là một thay đổi
+ * cần lưu. Case rỗng mà server cũng đang rỗng thì bỏ qua, nếu không lần lưu nào
+ * cũng gửi đủ 15 case dù chỉ gõ một ô.
+ */
+function changedCases(
+  current: readonly EdgeCase[],
+  server: readonly EdgeCase[] | undefined
+): EdgeCase[] {
+  const before = new Map((server ?? []).map((item) => [item.id, item] as const));
+  return current.filter((item) => {
+    const original = before.get(item.id);
+    const resolution = item.resolution.trim();
+    if (!original) return resolution.length > 0;
+    return (
+      resolution !== (original.resolution ?? '').trim() ||
+      item.imageObjectKey !== original.imageObjectKey
+    );
+  });
 }
 
 /**
@@ -269,6 +316,17 @@ function FailureStage({
       <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
         {retryLabel}
       </Button>
+    </div>
+  );
+}
+
+/** Đọc lại một phân tích đã có — nhanh hơn hẳn chạy phân tích nên không cần animation. */
+function ReopeningStage() {
+  const { t } = useI18n();
+  return (
+    <div className="text-muted-foreground py-14 text-center">
+      <Loader2 className="mx-auto size-6 animate-spin" aria-hidden />
+      <p className="mt-3 text-sm">{t('edgeCase.reopening')}</p>
     </div>
   );
 }

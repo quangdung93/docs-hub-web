@@ -286,6 +286,7 @@ export function DocumentTable({
       <EdgeCaseModal
         projectId={projectId}
         document={(documents ?? []).find((item) => item.id === analyzingId) ?? null}
+        analysisId={analyzingId ? (urdSummary?.get(analyzingId)?.analysisId ?? null) : null}
         onClose={() => setAnalyzingId(null)}
       />
 
@@ -355,7 +356,7 @@ function CompletenessCell({ summary, onOpen }: { summary: UrdSummary | null; onO
     <button
       type="button"
       onClick={onOpen}
-      title={t('completeness.reanalyze')}
+      title={t('completeness.continue')}
       className="focus-visible:ring-ring/40 w-36 rounded text-left focus-visible:ring-2 focus-visible:outline-none"
     >
       <div className="text-muted-foreground flex items-center justify-between text-xs">

@@ -63,5 +63,50 @@ assert.equal(all.data.new_revision_created, true, 'giải quyết hết thì ph�
 const done = await get(`${BASE}/documents/urd-summary`);
 assert.equal(done.data[0].resolved_cases, cases.length);
 
+// 8. Làm nhiều đợt: đang dở mà gọi `analyze` lần nữa phải bị từ chối bằng
+//    URD_ANALYSIS_ACTIVE kèm analysis_id, chứ không tạo lần chạy mới đè lên.
+const D2 = 'doc-multi';
+await get(`${BASE}/documents/${D2}/doc-type`, {
+  method: 'PATCH',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ doc_type: 'urd', version: 1 }),
+});
+const run1 = await get(`${BASE}/documents/${D2}/urd/analyze`, { method: 'POST' });
+const run1Id = run1.data.analysis.id;
+const run1Cases = run1.data.cases;
+
+// Giải quyết đúng 1 case rồi "đóng modal".
+await get(`${BASE}/documents/${D2}/urd/analyses/${run1Id}/resolutions`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ items: [{ case_id: run1Cases[0].id, resolution: 'đợt 1' }] }),
+});
+
+const blocked = await get(`${BASE}/documents/${D2}/urd/analyze`, { method: 'POST' });
+assert.equal(blocked.success, false, 'đang dở thì không được tạo phân tích mới');
+assert.equal(blocked.error.code, 'URD_ANALYSIS_ACTIVE');
+assert.equal(blocked.error.details.analysis_id, run1Id, 'phải chỉ ra analysis đang dở');
+
+// Mở lại bằng GET: công sức đợt 1 còn nguyên.
+const reopened = await get(`${BASE}/documents/${D2}/urd/analyses/${run1Id}`);
+assert.equal(reopened.data.analysis.resolved_cases, 1);
+assert.equal(
+  reopened.data.cases.find((c: { id: string }) => c.id === run1Cases[0].id).resolution,
+  'đợt 1'
+);
+
+// Làm tiếp đợt 2 chỉ gửi case mới — backend cộng dồn, không xoá đợt 1.
+await get(`${BASE}/documents/${D2}/urd/analyses/${run1Id}/resolutions`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ items: [{ case_id: run1Cases[1].id, resolution: 'đợt 2' }] }),
+});
+const after = await get(`${BASE}/documents/${D2}/urd/analyses/${run1Id}`);
+assert.equal(after.data.analysis.resolved_cases, 2, 'hai đợt phải cộng dồn');
+assert.equal(
+  after.data.cases.find((c: { id: string }) => c.id === run1Cases[0].id).resolution,
+  'đợt 1'
+);
+
 server.close();
-console.log(`urd-flow: all assertions passed (${cases.length} cases)`);
+console.log(`urd-flow: all assertions passed (${cases.length} cases, lam tiep nhieu dot OK)`);
