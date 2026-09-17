@@ -26,6 +26,7 @@ import {
 import { documentsApi } from '../api/documents.api';
 import { useDeleteDocument, useDocuments, useVersionLabels } from '../hooks/use-documents';
 import {
+  completenessDisplay,
   completenessPercent,
   completenessTone,
   type UrdSummary,
@@ -217,6 +218,7 @@ export function DocumentTable({
 
                 <TableCell>
                   <CompletenessCell
+                    status={document.status}
                     summary={urdSummary?.get(document.id) ?? null}
                     onOpen={() => setAnalyzingId(document.id)}
                   />
@@ -334,8 +336,28 @@ export function DocumentTable({
  * canonical) do backend giữ, client không đoán lại bằng tên file. Đoán sai theo
  * hướng chặn thì người dùng mất hẳn lối vào tính năng.
  */
-function CompletenessCell({ summary, onOpen }: { summary: UrdSummary | null; onOpen: () => void }) {
+function CompletenessCell({
+  status,
+  summary,
+  onOpen,
+}: {
+  status: DocumentStatus;
+  summary: UrdSummary | null;
+  onOpen: () => void;
+}) {
   const { t } = useI18n();
+
+  // Tài liệu chưa lập chỉ mục xong thì chưa có nguồn canonical, và `urd/analyze`
+  // chắc chắn trả về lỗi. Mời người dùng bấm vào một việc không thể thành công
+  // là mời họ đi vào ngõ cụt, nên để trống ô cho tới khi tài liệu sẵn sàng.
+  //
+  // Đã phân tích rồi thì vẫn hiện kết quả kể cả khi bản revision mới đang xử lý:
+  // mất số liệu cũ giữa chừng khó hiểu hơn là giữ lại.
+  const display = completenessDisplay(status, summary);
+
+  if (display === 'empty') {
+    return <span className="text-muted-foreground text-xs">{t('common.emptyValue')}</span>;
+  }
 
   // Chưa từng phân tích: vẫn cho bấm. Tài liệu nào phân tích được là do backend
   // quyết (`doc_type`, nguồn canonical), nên client không đoán trước bằng tên

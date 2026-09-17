@@ -100,6 +100,25 @@ export function resolvedCount(cases: readonly EdgeCase[]): number {
   return cases.filter((item) => item.resolution.trim().length > 0).length;
 }
 
+/**
+ * Ô "Hoàn thiện" nên hiện gì cho một dòng tài liệu.
+ *
+ *  - `empty`    — để trống: tài liệu chưa lập chỉ mục xong nên chưa có nguồn
+ *                 canonical, `urd/analyze` chắc chắn hỏng.
+ *  - `analyze`  — mời phân tích lần đầu.
+ *  - `progress` — đã có kết quả, hiện thanh tiến độ.
+ *
+ * Đã có kết quả thì luôn hiện, kể cả khi revision mới đang xử lý: số liệu biến
+ * mất giữa chừng khó hiểu hơn là giữ lại bản cũ.
+ */
+export function completenessDisplay(
+  status: string,
+  summary: UrdSummary | null
+): 'empty' | 'analyze' | 'progress' {
+  if (summary) return 'progress';
+  return status === 'indexed' ? 'analyze' : 'empty';
+}
+
 /** Ngưỡng màu cho thanh tiến độ, dùng chung để bảng và modal không lệch nhau. */
 export function completenessTone(percent: number): 'indexed' | 'queued' | 'failed' {
   if (percent >= 80) return 'indexed';

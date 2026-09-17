@@ -8,6 +8,7 @@
 import assert from 'node:assert/strict';
 
 import {
+  completenessDisplay,
   completenessPercent,
   completenessTone,
   resolvedCount,
@@ -90,5 +91,33 @@ const summary = toUrdSummary({
 assert.equal(summary.totalCases, 0);
 assert.equal(summary.analysisId, null);
 assert.equal(completenessPercent(summary.totalCases, summary.resolvedCases), 100);
+
+// ── completenessDisplay: chỉ mời phân tích khi tài liệu đã sẵn sàng ─────────
+const noSummary = null;
+assert.equal(
+  completenessDisplay('indexed', noSummary),
+  'analyze',
+  'đã lập chỉ mục thì cho phân tích'
+);
+// Ba trạng thái dưới đây đều chưa có nguồn canonical nên analyze chắc chắn hỏng.
+assert.equal(completenessDisplay('processing', noSummary), 'empty', 'đang xử lý thì để trống');
+assert.equal(completenessDisplay('queued', noSummary), 'empty', 'chờ xử lý thì để trống');
+assert.equal(completenessDisplay('failed', noSummary), 'empty', 'lỗi xử lý thì để trống');
+
+// Đã có kết quả thì luôn hiện, kể cả khi bản revision mới đang chạy lại.
+const hasSummary = {
+  documentId: 'd1',
+  analysisId: 'a1',
+  status: 'awaiting_input',
+  totalCases: 15,
+  resolvedCases: 3,
+};
+for (const status of ['indexed', 'processing', 'queued', 'failed']) {
+  assert.equal(
+    completenessDisplay(status, hasSummary),
+    'progress',
+    `status=${status} đã có kết quả thì không được giấu đi`
+  );
+}
 
 console.log('completeness: all assertions passed');
