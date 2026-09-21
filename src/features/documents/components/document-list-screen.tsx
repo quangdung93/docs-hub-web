@@ -2,7 +2,7 @@
 
 import { ArrowLeft, CircleDot, Filter, History, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { type MessageKey, useI18n } from '@/core/i18n';
@@ -42,8 +42,15 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
   const [search, setSearch] = useState('');
   const [formatFilter, setFormatFilter] = useState<DocumentFormat | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
-  /** Which snapshot the list shows. Null means the newest, the only editable one. */
-  const [viewingVersion, setViewingVersion] = useState<string | null>(null);
+  /**
+   * Which snapshot the list shows. Null means the newest, the only editable one.
+   *
+   * Khởi tạo từ `?version=` để quay về từ màn upload thì thấy đúng phiên bản vừa
+   * tải lên, thay vì rơi về bản mới nhất của project — hai thứ này khác nhau khi
+   * người dùng chủ động chọn một phiên bản cũ hơn để tải vào.
+   */
+  const versionParam = useSearchParams().get('version');
+  const [viewingVersion, setViewingVersion] = useState<string | null>(versionParam);
   const [createOpen, setCreateOpen] = useState(false);
   const createVersion = useCreateProjectVersion(projectId);
 

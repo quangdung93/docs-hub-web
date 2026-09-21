@@ -2,6 +2,7 @@
 
 import { ArrowRight, Folder, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useCallback, useState } from 'react';
 
 import { useI18n } from '@/core/i18n';
 import { useProject } from '@/features/projects';
@@ -16,6 +17,10 @@ export function UploadScreen({ projectId }: { projectId: string }) {
   const { t } = useI18n();
   const router = useRouter();
   const { data: project } = useProject(projectId);
+  /** Phiên bản các tệp đang được tải vào, do panel báo lên. */
+  const [targetVersionId, setTargetVersionId] = useState<string | undefined>();
+  // Bọc trong useCallback để panel không chạy lại effect mỗi lần màn hình render.
+  const handleVersionChange = useCallback((id: string | undefined) => setTargetVersionId(id), []);
 
   return (
     <Card>
@@ -31,7 +36,7 @@ export function UploadScreen({ projectId }: { projectId: string }) {
       />
 
       <CardBody>
-        <UploadPanel projectId={projectId} />
+        <UploadPanel projectId={projectId} onVersionChange={handleVersionChange} />
       </CardBody>
 
       <CardFooter>
@@ -44,7 +49,10 @@ export function UploadScreen({ projectId }: { projectId: string }) {
           <Button variant="outline" onClick={() => router.push(projectRoutes.documents(projectId))}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={() => router.push(projectRoutes.chat(projectId))}>
+          {/* Về lại Quản lý tài liệu, không phải màn hỏi đáp: vừa tải tài liệu
+              lên thì việc tiếp theo là xem nó đã vào đúng chỗ chưa. Kèm theo
+              phiên bản vừa chọn để danh sách không rơi về bản mới nhất. */}
+          <Button onClick={() => router.push(projectRoutes.documents(projectId, targetVersionId))}>
             {t('common.done')}
             <ArrowRight aria-hidden />
           </Button>

@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { useI18n } from '@/core/i18n';
 import { Dropzone } from '@/shared/ui';
 
@@ -18,11 +20,18 @@ export function UploadPanel({
   projectId,
   layout = 'split',
   initialVersion = false,
+  onVersionChange,
 }: {
   projectId: string;
   layout?: 'split' | 'stacked';
   /** Set by the create-project wizard: the version named here is the first one. */
   initialVersion?: boolean;
+  /**
+   * Phiên bản mà các tệp sẽ vào. Màn hình bao ngoài cần biết để điều hướng về
+   * đúng phiên bản đó khi người dùng bấm xong — lựa chọn này là state trong
+   * hook, đi khỏi trang là mất.
+   */
+  onVersionChange?: (versionId: string | undefined) => void;
 }) {
   const { t } = useI18n();
   const {
@@ -38,6 +47,11 @@ export function UploadPanel({
     isAddingVersion,
     canUpload,
   } = useUploadQueue(projectId);
+
+  // Báo lên mỗi khi phiên bản đích đổi, kể cả lần đầu khi nó tự chọn bản mới nhất.
+  useEffect(() => {
+    onVersionChange?.(targetVersionId);
+  }, [targetVersionId, onVersionChange]);
 
   // Above the dropzone on purpose: an upload with no version is refused, so the
   // choice has to be visible before a file is dropped, not after it fails.
