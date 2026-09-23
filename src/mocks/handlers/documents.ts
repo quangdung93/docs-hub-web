@@ -53,6 +53,7 @@ function toRevisionDto(document: Document, projectId: string) {
     project_id: projectId,
     created_by: 'u-admin',
     scope: { project_version_id: 'v-mock-draft' },
+    document_version: document.documentVersion ?? undefined,
     revision_no: document.revisionNo ?? 1,
     file_name: document.fileName ?? document.name,
     media_type: mediaTypeOf(document.fileName ?? document.name),
@@ -209,6 +210,7 @@ export const documentHandlers = [
       // Uploads carry the scope the client sent, so the version column and the
       // version filter reflect a real choice rather than a hardcoded default.
       projectVersionId: String(form.get('project_version_id') ?? '') || null,
+      documentVersion: String(form.get('document_version') ?? '') || null,
       history: [
         {
           id: `r-${id}`,
@@ -217,6 +219,7 @@ export const documentHandlers = [
           sizeBytes: file instanceof File ? file.size : 0,
           status: 'processing' as const,
           projectVersionId: String(form.get('project_version_id') ?? '') || null,
+          documentVersion: String(form.get('document_version') ?? '') || null,
           uploadedBy: 'u-admin',
           uploadedAt: new Date().toISOString(),
         },

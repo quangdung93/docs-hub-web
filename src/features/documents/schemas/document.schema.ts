@@ -18,6 +18,7 @@ export const RevisionEntrySchema = z.object({
   sizeBytes: z.number().int().nonnegative(),
   status: z.enum(['indexed', 'processing', 'queued', 'failed']),
   projectVersionId: z.string().nullable(),
+  documentVersion: z.string().nullable().optional(),
   uploadedBy: z.string().nullable(),
   uploadedAt: z.iso.datetime(),
 });
@@ -70,6 +71,8 @@ export const DocumentSchema = z.object({
    * shows a dash rather than guessing the current version.
    */
   projectVersionId: z.string().nullable(),
+  /** User-entered version label on the newest revision, when provided. */
+  documentVersion: z.string().nullable().optional(),
   /**
    * Every revision, newest first. This is the document's change history: the
    * backend has no history endpoint, but `GET /documents/{id}` already returns

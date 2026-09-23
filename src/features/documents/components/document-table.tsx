@@ -212,7 +212,9 @@ export function DocumentTable({
                       </button>
                     )}
                     <span className="text-muted-foreground text-xs">
-                      {labelOf(document.projectVersionId) ?? t('common.emptyValue')}
+                      {document.documentVersion ||
+                        labelOf(document.projectVersionId) ||
+                        t('common.emptyValue')}
                     </span>
                   </span>
                 </TableCell>

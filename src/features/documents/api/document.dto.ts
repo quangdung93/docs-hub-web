@@ -53,6 +53,7 @@ export const RevisionDtoSchema = z.object({
   project_id: z.string(),
   revision_no: z.number().int(),
   file_name: z.string(),
+  document_version: z.string().nullish(),
   media_type: z.string(),
   size_bytes: z.number().int().nonnegative(),
   /** Computed server-side since 25/08/2026; clients no longer send it. */

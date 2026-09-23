@@ -28,6 +28,7 @@ import {
 export function useUploadQueue(projectId: string, projectVersionId?: string) {
   const queryClient = useQueryClient();
   const [items, setItems] = useState<UploadItem[]>([]);
+  const [documentVersion, setDocumentVersion] = useState('');
   const { data: versions } = useProjectVersions(projectId);
   const createVersion = useCreateProjectVersion(projectId);
 
@@ -81,6 +82,7 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
         documentsApi
           .upload(projectId, file, {
             projectVersionId: targetVersionId,
+            documentVersion,
             title: file.name,
             onProgress: (percent) => patch(item.id, { progress: percent }),
           })
@@ -106,7 +108,7 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
           });
       }
     },
-    [patch, projectId, queryClient, targetVersionId]
+    [documentVersion, patch, projectId, queryClient, targetVersionId]
   );
 
   const removeItem = useCallback((id: string) => {
@@ -149,6 +151,8 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
     /** Draft versions an upload can target, newest first. */
     draftVersions,
     targetVersionId,
+    documentVersion,
+    setDocumentVersion,
     selectVersion: setSelectedVersionId,
     addVersion,
     isAddingVersion: createVersion.isPending,

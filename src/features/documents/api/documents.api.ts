@@ -46,6 +46,8 @@ export interface DocumentListParams {
 export interface UploadOptions {
   /** The draft version the revision lands in. Required unless `changeRequestId` is set. */
   projectVersionId?: string;
+  /** User-entered document version, independent from the project snapshot. */
+  documentVersion?: string;
   changeRequestId?: string;
   /** Add a revision to this existing document instead of creating a new one. */
   documentId?: string;
@@ -177,6 +179,9 @@ export const documentsApi = {
     form.append('file_name', file.name);
 
     if (options.projectVersionId) form.append('project_version_id', options.projectVersionId);
+    if (options.documentVersion?.trim()) {
+      form.append('document_version', options.documentVersion.trim());
+    }
     if (options.changeRequestId) form.append('change_request_id', options.changeRequestId);
     if (options.description) form.append('description', options.description);
 

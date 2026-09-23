@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 import { useI18n } from '@/core/i18n';
-import { Dropzone } from '@/shared/ui';
+import { Dropzone, Field, Input } from '@/shared/ui';
 
 import { useUploadQueue } from '../hooks/use-upload-queue';
 import { ACCEPT_ATTRIBUTE } from '../schemas/document.schema';
@@ -21,6 +21,7 @@ export function UploadPanel({
   layout = 'split',
   initialVersion = false,
   onVersionChange,
+  customDocumentVersion = false,
 }: {
   projectId: string;
   layout?: 'split' | 'stacked';
@@ -32,6 +33,8 @@ export function UploadPanel({
    * hook, đi khỏi trang là mất.
    */
   onVersionChange?: (versionId: string | undefined) => void;
+  /** Show the free-text revision version used by the document upload screen. */
+  customDocumentVersion?: boolean;
 }) {
   const { t } = useI18n();
   const {
@@ -46,6 +49,8 @@ export function UploadPanel({
     addVersion,
     isAddingVersion,
     canUpload,
+    documentVersion,
+    setDocumentVersion,
   } = useUploadQueue(projectId);
 
   // Báo lên mỗi khi phiên bản đích đổi, kể cả lần đầu khi nó tự chọn bản mới nhất.
@@ -53,9 +58,30 @@ export function UploadPanel({
     onVersionChange?.(targetVersionId);
   }, [targetVersionId, onVersionChange]);
 
-  // Above the dropzone on purpose: an upload with no version is refused, so the
-  // choice has to be visible before a file is dropped, not after it fails.
-  const versionPicker = (
+  // The upload API requires a project version scope. The document's own version
+  // label is optional and independent from that scope.
+  const versionPicker = customDocumentVersion ? (
+    <>
+      <Field label={t('upload.documentVersion')} htmlFor="document-version">
+        <Input
+          id="document-version"
+          value={documentVersion}
+          onChange={(event) => setDocumentVersion(event.target.value)}
+          maxLength={255}
+          placeholder={t('upload.documentVersionPlaceholder')}
+        />
+      </Field>
+      {!draftVersions.length && (
+        <VersionPicker
+          versions={draftVersions}
+          value={targetVersionId}
+          onChange={selectVersion}
+          onCreate={addVersion}
+          isCreating={isAddingVersion}
+        />
+      )}
+    </>
+  ) : (
     <VersionPicker
       versions={draftVersions}
       value={targetVersionId}
