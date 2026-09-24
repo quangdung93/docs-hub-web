@@ -187,6 +187,7 @@ export const vi = {
   'upload.dropzone.browse': 'bấm để chọn tệp',
   'upload.dropzone.fromDevice': 'từ máy',
   'upload.dropzone.hint': 'PDF · DOCX · XLSX · CSV · TXT · Markdown — tối đa 20 MB / tệp',
+  'upload.dropzone.needDocumentVersion': 'Nhập phiên bản tài liệu ở trên để tải tệp lên.',
   'upload.dropzone.needVersion': 'Dự án cần có phiên bản nháp để tải tệp lên.',
   'upload.queue.title': 'Hàng đợi xử lý',
   'upload.queue.progress': '{done}/{total} hoàn tất',

@@ -58,16 +58,22 @@ export function UploadPanel({
     onVersionChange?.(targetVersionId);
   }, [targetVersionId, onVersionChange]);
 
-  // The upload API requires a project version scope. The document's own version
-  // label is optional and independent from that scope.
+  // Phiên bản tài liệu là bắt buộc ở màn tải tài liệu: chưa nhập thì chưa cho
+  // thả file. Chặn ở dropzone chứ không đợi từng dòng hỏng sau khi đã vào hàng
+  // đợi — báo lúc đó là quá muộn, và trông như lỗi hệ thống chứ không phải thiếu
+  // thông tin. Phạm vi phiên bản project vẫn là chuyện riêng, độc lập với nhãn này.
+  const needsDocumentVersion = customDocumentVersion && !documentVersion.trim();
+
   const versionPicker = customDocumentVersion ? (
     <>
-      <Field label={t('upload.documentVersion')} htmlFor="document-version">
+      <Field label={t('upload.documentVersion')} htmlFor="document-version" required>
         <Input
           id="document-version"
           value={documentVersion}
           onChange={(event) => setDocumentVersion(event.target.value)}
           maxLength={255}
+          required
+          aria-required
           placeholder={t('upload.documentVersionPlaceholder')}
         />
       </Field>
@@ -105,8 +111,12 @@ export function UploadPanel({
       // scope is required — but failing a row after the file is already in the
       // queue tells the user too late, and reads as a bug rather than a
       // missing input.
-      disabled={!canUpload}
-      disabledHint={t('upload.dropzone.needVersion')}
+      disabled={!canUpload || needsDocumentVersion}
+      // Thiếu phiên bản project thì báo cái đó trước: đó là thứ người dùng không
+      // tự gõ được ở đây, phải tạo phiên bản mới.
+      disabledHint={
+        !canUpload ? t('upload.dropzone.needVersion') : t('upload.dropzone.needDocumentVersion')
+      }
       className={layout === 'split' ? 'min-h-[280px]' : 'min-h-[220px]'}
     />
   );

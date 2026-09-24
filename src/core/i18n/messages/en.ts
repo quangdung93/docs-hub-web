@@ -184,6 +184,7 @@ export const en: Record<MessageKey, string> = {
   'upload.dropzone.browse': 'browse to select files',
   'upload.dropzone.fromDevice': 'from your device',
   'upload.dropzone.hint': 'PDF · DOCX · XLSX · CSV · TXT · Markdown — max 20 MB per file',
+  'upload.dropzone.needDocumentVersion': 'Enter the document version above to upload files.',
   'upload.dropzone.needVersion': 'The project needs a draft version before you can upload files.',
   'upload.queue.title': 'Processing queue',
   'upload.queue.progress': '{done}/{total} complete',

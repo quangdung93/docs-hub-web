@@ -2,6 +2,7 @@ import axios, { type AxiosError, type AxiosInstance } from 'axios';
 
 import { ApiEnvelopeSchema } from '@/core/api/envelope';
 import { AppError, ERROR_CODE } from '@/core/api/errors';
+import { businessError } from '@/core/api/unwrap';
 
 /**
  * Client-side transport. Lives in `shared/` (not `core/`) on purpose: Axios is
@@ -41,7 +42,14 @@ http.interceptors.request.use((config) => {
 });
 
 http.interceptors.response.use(
-  (response) => response,
+  // Lỗi nghiệp vụ đến dưới dạng HTTP 200 + `success:false`. Chặn ở đây, một lần
+  // cho mọi lời gọi: phần lớn module `api/` parse thẳng bằng `apiSuccessSchema`
+  // chứ không qua `unwrap`, nên trước đây mọi lỗi kiểu này (file trùng nội dung,
+  // phân tích đang dở…) hiện ra thành khối lỗi Zod thay vì câu của backend.
+  (response) => {
+    const failure = businessError(response.data);
+    return failure ? Promise.reject(failure) : response;
+  },
   (error: AxiosError) => Promise.reject(normalizeAxiosError(error))
 );
 
@@ -66,7 +74,7 @@ export function normalizeAxiosError(error: AxiosError): AppError {
 
   // Prefer the structured envelope when the backend sent one. This is the 4xx/5xx
   // path (technical failures); business failures arrive as HTTP 200 and are
-  // handled by `unwrap`, not here.
+  // rejected by the success interceptor above.
   const parsed = ApiEnvelopeSchema.safeParse(response.data);
   if (parsed.success && parsed.data.error) {
     const { code, message, details, retryable } = parsed.data.error;
