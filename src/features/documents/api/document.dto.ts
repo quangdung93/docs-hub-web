@@ -80,6 +80,12 @@ export const RevisionDtoSchema = z.object({
 export const UploadResponseDtoSchema = z.object({
   document: DocumentDtoSchema,
   revision: RevisionDtoSchema,
+  /**
+   * Backend tự nhận diện loại tài liệu lúc tải lên: `"urd"` hoặc rỗng. Chỉ có
+   * trong phản hồi upload, không lưu vào tài liệu — bỏ lỡ lúc này là mất.
+   * Kiểm chứng 24/09/2026: file kiểu URD → "urd", README → "".
+   */
+  suggested_doc_type: z.string().nullish(),
 });
 
 export const DocumentDetailDtoSchema = z.object({

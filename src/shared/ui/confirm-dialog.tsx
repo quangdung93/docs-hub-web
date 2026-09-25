@@ -42,8 +42,11 @@ export function ConfirmDialog({
   /**
    * Acknowledgement instead of a decision: one neutral button, no cancel and no
    * destructive styling. For telling the user something, not asking them.
+   *
+   * `question`: hai nút như `confirm` nhưng nút chính không tô đỏ — cho câu hỏi
+   * có/không không phá huỷ gì (vd xác nhận loại tài liệu).
    */
-  variant?: 'confirm' | 'notice';
+  variant?: 'confirm' | 'notice' | 'question';
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [typed, setTyped] = useState('');
@@ -97,14 +100,14 @@ export function ConfirmDialog({
         )}
 
         <div className="mt-5 flex items-center justify-end gap-2">
-          {variant === 'confirm' && (
+          {variant !== 'notice' && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
               {cancelLabel}
             </Button>
           )}
           <Button
             type="button"
-            variant={variant === 'notice' ? 'default' : 'destructive'}
+            variant={variant === 'confirm' ? 'destructive' : 'default'}
             onClick={() => onConfirm(typed.trim())}
             disabled={pending || !phraseSatisfied}
           >

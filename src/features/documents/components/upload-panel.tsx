@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 import { useI18n } from '@/core/i18n';
-import { Dropzone, Field, Input } from '@/shared/ui';
+import { ConfirmDialog, Dropzone, Field, Input } from '@/shared/ui';
 
 import { useUploadQueue } from '../hooks/use-upload-queue';
 import { ACCEPT_ATTRIBUTE } from '../schemas/document.schema';
@@ -51,7 +51,25 @@ export function UploadPanel({
     canUpload,
     documentVersion,
     setDocumentVersion,
+    urdPrompt,
+    confirmUrdPrompt,
+    dismissUrdPrompt,
+    isConfirmingUrd,
   } = useUploadQueue(projectId);
+
+  const urdDialog = (
+    <ConfirmDialog
+      open={urdPrompt !== null}
+      variant="question"
+      title={t('upload.urdPrompt.title')}
+      description={t('upload.urdPrompt.description', { name: urdPrompt?.fileName ?? '' })}
+      confirmLabel={t('upload.urdPrompt.confirm')}
+      cancelLabel={t('upload.urdPrompt.reject')}
+      onConfirm={() => void confirmUrdPrompt()}
+      onCancel={dismissUrdPrompt}
+      pending={isConfirmingUrd}
+    />
+  );
 
   // Báo lên mỗi khi phiên bản đích đổi, kể cả lần đầu khi nó tự chọn bản mới nhất.
   useEffect(() => {
@@ -157,6 +175,7 @@ export function UploadPanel({
   if (layout === 'stacked') {
     return (
       <div className="space-y-4">
+        {urdDialog}
         {versionPicker}
         {dropzone}
         {items.length > 0 && queue}
@@ -166,6 +185,7 @@ export function UploadPanel({
 
   return (
     <div className="space-y-4">
+      {urdDialog}
       {versionPicker}
       <div className="grid gap-6 lg:grid-cols-2">
         {dropzone}

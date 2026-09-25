@@ -103,8 +103,8 @@ export function resolvedCount(cases: readonly EdgeCase[]): number {
 /**
  * Ô "Hoàn thiện" nên hiện gì cho một dòng tài liệu.
  *
- *  - `empty`    — để trống: tài liệu chưa lập chỉ mục xong nên chưa có nguồn
- *                 canonical, `urd/analyze` chắc chắn hỏng.
+ *  - `empty`    — để trống: chưa xác nhận là URD, hoặc chưa lập chỉ mục xong
+ *                 (chưa có nguồn canonical, `urd/analyze` chắc chắn hỏng).
  *  - `analyze`  — mời phân tích lần đầu.
  *  - `progress` — đã có kết quả, hiện thanh tiến độ.
  *
@@ -113,10 +113,13 @@ export function resolvedCount(cases: readonly EdgeCase[]): number {
  */
 export function completenessDisplay(
   status: string,
-  summary: UrdSummary | null
+  summary: UrdSummary | null,
+  docType: string | null
 ): 'empty' | 'analyze' | 'progress' {
   if (summary) return 'progress';
-  return status === 'indexed' ? 'analyze' : 'empty';
+  // Chỉ tài liệu đã được xác nhận là URD mới mời phân tích. README hay file cấu
+  // hình không có edge case nghiệp vụ nào để tìm.
+  return status === 'indexed' && docType === 'urd' ? 'analyze' : 'empty';
 }
 
 /** Ngưỡng màu cho thanh tiến độ, dùng chung để bảng và modal không lệch nhau. */

@@ -74,11 +74,7 @@ export function EdgeCaseModal({
     if (!document || analysisId) return;
 
     let cancelled = false;
-    analyzeAsync({
-      documentId: document.id,
-      version: document.version,
-      docType: document.docType,
-    })
+    analyzeAsync({ documentId: document.id })
       .then((result) => {
         if (!cancelled) setDraft({ documentId: document.id, value: result });
       })
@@ -183,11 +179,7 @@ export function EdgeCaseModal({
               void existing.refetch();
               return;
             }
-            void analyzeAsync({
-              documentId: document.id,
-              version: document.version,
-              docType: document.docType,
-            })
+            void analyzeAsync({ documentId: document.id })
               .then((value) => setDraft({ documentId: document.id, value }))
               .catch(() => undefined);
           }}

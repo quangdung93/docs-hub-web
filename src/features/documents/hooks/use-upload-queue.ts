@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import { queryKeys } from '@/core/api';
 import { AppError } from '@/core/api/errors';
 
+import { urdApi } from '../api/urd.api';
 import { documentsApi } from '../api/documents.api';
 import { useCreateProjectVersion, useProjectVersions } from './use-documents';
 import {
@@ -25,10 +26,20 @@ import {
  * one explicitly; otherwise the newest **draft** version is used, since a
  * published version is frozen and the backend refuses writes to it.
  */
+/** Một tệp backend gợi ý là URD. `version` là bộ đếm optimistic-lock để gửi `doc-type`. */
+export interface UrdPrompt {
+  documentId: string;
+  fileName: string;
+  version: number;
+}
+
 export function useUploadQueue(projectId: string, projectVersionId?: string) {
   const queryClient = useQueryClient();
   const [items, setItems] = useState<UploadItem[]>([]);
   const [documentVersion, setDocumentVersion] = useState('');
+  /** Tệp backend gợi ý là URD, đang chờ người dùng xác nhận — hỏi lần lượt. */
+  const [urdPrompts, setUrdPrompts] = useState<UrdPrompt[]>([]);
+  const [isConfirmingUrd, setIsConfirmingUrd] = useState(false);
   const { data: versions } = useProjectVersions(projectId);
   const createVersion = useCreateProjectVersion(projectId);
 
@@ -86,7 +97,16 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
             title: file.name,
             onProgress: (percent) => patch(item.id, { progress: percent }),
           })
-          .then((document) => {
+          .then(({ document, suggestedDocType }) => {
+            // Backend đoán đây là URD mà tài liệu chưa được xác nhận: hỏi người
+            // dùng. Không tự xác nhận — `doc_type` là quyết định của người dùng
+            // (Swagger: "do người dùng xác nhận qua ConfirmDocType").
+            if (suggestedDocType === 'urd' && document.docType !== 'urd') {
+              setUrdPrompts((current) => [
+                ...current,
+                { documentId: document.id, fileName: file.name, version: document.version },
+              ]);
+            }
             // Upload finished; the server is now embedding — progress is unknowable,
             // so drop to the indeterminate state until the document reports back.
             patch(item.id, {
@@ -110,6 +130,29 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
     },
     [documentVersion, patch, projectId, queryClient, targetVersionId]
   );
+
+  /** Bỏ câu hỏi đang hiện, chuyển sang tệp kế tiếp. "Không phải URD" chỉ là bỏ qua. */
+  const dismissUrdPrompt = useCallback(() => setUrdPrompts((current) => current.slice(1)), []);
+
+  /**
+   * Xác nhận tệp đang hỏi là URD. Lỗi thì vẫn đóng câu hỏi: người dùng còn xác
+   * nhận lại được ở Quản lý tài liệu, còn kẹt popup lại thì chặn cả màn upload.
+   */
+  const confirmUrdPrompt = useCallback(async () => {
+    const prompt = urdPrompts[0];
+    if (!prompt) return;
+    setIsConfirmingUrd(true);
+    try {
+      await urdApi.confirmUrd(projectId, prompt.documentId, prompt.version);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.urd.summary(projectId) });
+    } catch {
+      // Toàn cục đã có toast cho lỗi mutation/query; ở đây chỉ không chặn luồng.
+    } finally {
+      setIsConfirmingUrd(false);
+      dismissUrdPrompt();
+    }
+  }, [dismissUrdPrompt, projectId, queryClient, urdPrompts]);
 
   const removeItem = useCallback((id: string) => {
     setItems((current) => current.filter((item) => item.id !== id));
@@ -153,6 +196,11 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
     targetVersionId,
     documentVersion,
     setDocumentVersion,
+    /** Tệp đang được hỏi "có phải URD không", hoặc null. */
+    urdPrompt: urdPrompts[0] ?? null,
+    confirmUrdPrompt,
+    dismissUrdPrompt,
+    isConfirmingUrd,
     selectVersion: setSelectedVersionId,
     addVersion,
     isAddingVersion: createVersion.isPending,

@@ -228,6 +228,7 @@ export function DocumentTable({
                 <TableCell>
                   <CompletenessCell
                     status={document.status}
+                    docType={document.docType}
                     summary={urdSummary?.get(document.id) ?? null}
                     onOpen={() => setAnalyzingId(document.id)}
                   />
@@ -347,10 +348,12 @@ export function DocumentTable({
  */
 function CompletenessCell({
   status,
+  docType,
   summary,
   onOpen,
 }: {
   status: DocumentStatus;
+  docType: string | null;
   summary: UrdSummary | null;
   onOpen: () => void;
 }) {
@@ -362,7 +365,7 @@ function CompletenessCell({
   //
   // Đã phân tích rồi thì vẫn hiện kết quả kể cả khi bản revision mới đang xử lý:
   // mất số liệu cũ giữa chừng khó hiểu hơn là giữ lại.
-  const display = completenessDisplay(status, summary);
+  const display = completenessDisplay(status, summary, docType);
 
   if (display === 'empty') {
     return <span className="text-muted-foreground text-xs">{t('common.emptyValue')}</span>;

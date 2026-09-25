@@ -232,6 +232,9 @@ export const documentHandlers = [
       envelope({
         document: toDocumentDto(document, projectId),
         revision: toRevisionDto(document, projectId),
+        // Backend thật nhận diện theo nội dung; mock đoán theo tên cho đủ để
+        // popup "Phát hiện tài liệu URD" hiện được khi chạy dev.
+        suggested_doc_type: /urd|user[\s_-]*requirement/i.test(name) ? 'urd' : '',
       }),
       { status: 202 }
     );

@@ -47,23 +47,15 @@ export function useUrdSummary(projectId: string, hasPending = false) {
   return useQuery(urdSummaryQueryOptions(projectId, hasPending));
 }
 
-/**
- * Chạy phân tích edge case cho một tài liệu.
- *
- * Tự xác nhận `doc_type=urd` trước khi phân tích khi tài liệu chưa được xác
- * nhận: backend bắt buộc bước này, và bắt người dùng bấm hai nút cho một ý định
- * duy nhất là thừa. `version` phải là giá trị vừa đọc từ tài liệu vì backend
- * dùng nó để chống ghi đè.
- */
+/** Chạy phân tích edge case cho một tài liệu đã được xác nhận là URD. */
 export function useAnalyzeUrd(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: { documentId: string; version: number; docType: string | null }) => {
-      if (input.docType !== 'urd') {
-        await urdApi.confirmUrd(projectId, input.documentId, input.version);
-      }
-
+    // Không tự gán `doc_type` ở đây nữa: trước đây bấm "Chưa phân tích" trên
+    // README.md cũng âm thầm đánh dấu nó là URD. Xác nhận là việc của người dùng,
+    // qua popup sau khi tải lên; nút chỉ hiện cho tài liệu đã xác nhận.
+    mutationFn: async (input: { documentId: string }) => {
       try {
         return await urdApi.analyze(projectId, input.documentId);
       } catch (error) {

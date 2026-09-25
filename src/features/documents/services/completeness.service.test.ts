@@ -92,19 +92,19 @@ assert.equal(summary.totalCases, 0);
 assert.equal(summary.analysisId, null);
 assert.equal(completenessPercent(summary.totalCases, summary.resolvedCases), 100);
 
-// ── completenessDisplay: chỉ mời phân tích khi tài liệu đã sẵn sàng ─────────
-const noSummary = null;
-assert.equal(
-  completenessDisplay('indexed', noSummary),
-  'analyze',
-  'đã lập chỉ mục thì cho phân tích'
-);
-// Ba trạng thái dưới đây đều chưa có nguồn canonical nên analyze chắc chắn hỏng.
-assert.equal(completenessDisplay('processing', noSummary), 'empty', 'đang xử lý thì để trống');
-assert.equal(completenessDisplay('queued', noSummary), 'empty', 'chờ xử lý thì để trống');
-assert.equal(completenessDisplay('failed', noSummary), 'empty', 'lỗi xử lý thì để trống');
+// ── completenessDisplay: chỉ mời phân tích tài liệu đã xác nhận URD ────────
+// Đã xác nhận URD + đã lập chỉ mục → mời phân tích.
+assert.equal(completenessDisplay('indexed', null, 'urd'), 'analyze');
+// Chưa xác nhận URD thì không bao giờ hiện nút, dù đã lập chỉ mục — trước đây
+// bấm nút trên README.md là âm thầm gán nó thành URD.
+assert.equal(completenessDisplay('indexed', null, null), 'empty', 'README.md không được hiện nút');
+assert.equal(completenessDisplay('indexed', null, ''), 'empty');
+// Là URD nhưng chưa lập chỉ mục xong: chưa có nguồn canonical, analyze chắc chắn hỏng.
+for (const status of ['processing', 'queued', 'failed']) {
+  assert.equal(completenessDisplay(status, null, 'urd'), 'empty', `URD đang ${status}`);
+}
 
-// Đã có kết quả thì luôn hiện, kể cả khi bản revision mới đang chạy lại.
+// Đã có kết quả thì luôn hiện, ở mọi trạng thái và kể cả khi docType chưa kịp tải.
 const hasSummary = {
   documentId: 'd1',
   analysisId: 'a1',
@@ -113,11 +113,7 @@ const hasSummary = {
   resolvedCases: 3,
 };
 for (const status of ['indexed', 'processing', 'queued', 'failed']) {
-  assert.equal(
-    completenessDisplay(status, hasSummary),
-    'progress',
-    `status=${status} đã có kết quả thì không được giấu đi`
-  );
+  assert.equal(completenessDisplay(status, hasSummary, null), 'progress', `status=${status}`);
 }
 
 console.log('completeness: all assertions passed');

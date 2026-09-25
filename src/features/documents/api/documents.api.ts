@@ -169,7 +169,11 @@ export const documentsApi = {
    * Multipart upload. Creates a new document, or appends a revision when
    * `documentId` is given — the backend uses two different paths for that.
    */
-  upload: async (projectId: string, file: File, options: UploadOptions): Promise<Document> => {
+  upload: async (
+    projectId: string,
+    file: File,
+    options: UploadOptions
+  ): Promise<{ document: Document; suggestedDocType: string | null }> => {
     const form = new FormData();
     form.append('file', file);
     form.append('size_bytes', String(file.size));
@@ -201,7 +205,10 @@ export const documentsApi = {
     });
 
     const result = apiSuccessSchema(UploadResponseDtoSchema).parse(data).data;
-    return toDocument(result.document, [result.revision]);
+    return {
+      document: toDocument(result.document, [result.revision]),
+      suggestedDocType: result.suggested_doc_type || null,
+    };
   },
 
   /** Rename / re-describe. `version` is the optimistic lock read from the row. */
