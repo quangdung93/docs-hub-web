@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 
 import { type RevisionDto } from '../api/document.dto';
 
-import { toDocument, toHistory } from './document.mapper';
+import { latestTimestamp, toDocument, toHistory } from './document.mapper';
 
 const revision = (over: Partial<RevisionDto>): RevisionDto => ({
   id: 'r1',
@@ -90,5 +90,23 @@ assert.deepEqual(toHistory(null), []);
   assert.equal(document.projectVersionId, null);
   assert.deepEqual(document.history, []);
 }
+
+// ── latestTimestamp: cột Cập nhật phải theo revision mới nhất ──────────────
+// Dữ liệu thật của key.md (25/09/2026): tài liệu tạo hôm qua, revision #2 hôm nay.
+assert.equal(
+  latestTimestamp(
+    '2026-09-24T03:08:16.694668Z',
+    '2026-09-25T07:13:58.180821Z',
+    '2026-09-25T07:13:58.180821Z'
+  ),
+  '2026-09-25T07:13:58.180821Z',
+  'revision mới phải thắng updated_at cũ của tài liệu'
+);
+assert.equal(latestTimestamp('2026-09-24T03:08:16Z', null, undefined), '2026-09-24T03:08:16Z');
+// Phần lẻ giây dài ngắn khác nhau không được làm sai thứ tự (so chuỗi thì sai).
+assert.equal(
+  latestTimestamp('2026-09-25T07:13:58.9Z', '2026-09-25T07:13:58.180821Z'),
+  '2026-09-25T07:13:58.9Z'
+);
 
 console.log('document.mapper self-check passed');

@@ -27,6 +27,11 @@ export const DocumentDtoSchema = z.object({
   created_by: z.string().nullish(),
   created_at: z.string(),
   updated_at: z.string(),
+  /**
+   * Thời điểm tải lên revision mới nhất. Khác `updated_at`: backend không đụng
+   * tới `updated_at` khi thêm revision (kiểm chứng 25/09/2026).
+   */
+  uploaded_at: z.string().nullish(),
   /** Optimistic-locking counter — PATCH echoes it back and rejects a stale one. */
   version: z.number().int(),
   /**

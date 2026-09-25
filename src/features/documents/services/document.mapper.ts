@@ -100,7 +100,10 @@ export function toDocument(dto: DocumentDto, revisions?: readonly RevisionDto[] 
     // Null renders as "—"; a fabricated 0 would read as "indexed but empty".
     chunkCount: null,
     status: toDocumentStatus(revision),
-    updatedAt: dto.updated_at,
+    // Mốc mới nhất trong ba nguồn. Tải lại một tệp cùng tên thành revision mới
+    // của tài liệu cũ, nhưng backend không cập nhật `updated_at` của tài liệu —
+    // chỉ lấy trường đó thì tệp vừa tải lên hiện "hôm qua".
+    updatedAt: latestTimestamp(dto.updated_at, dto.uploaded_at, revision?.created_at),
     fileName: revision?.file_name ?? null,
     mediaType: revision?.media_type ?? null,
     revisionId: revision?.id ?? null,
@@ -114,4 +117,12 @@ export function toDocument(dto: DocumentDto, revisions?: readonly RevisionDto[] 
     deletedAt: dto.deleted_at ?? null,
     history: toHistory(revisions),
   };
+}
+
+/** ISO timestamp mới nhất trong các giá trị có mặt. So bằng `Date.parse` vì độ dài phần lẻ giây khác nhau. */
+export function latestTimestamp(first: string, ...rest: (string | null | undefined)[]): string {
+  return rest.reduce<string>(
+    (latest, value) => (value && Date.parse(value) > Date.parse(latest) ? value : latest),
+    first
+  );
 }
