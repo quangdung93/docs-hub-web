@@ -20,8 +20,17 @@ export function formatRelativeTime(isoDate: string, locale: Locale, now = Date.n
   for (const [unit, ms] of UNITS) {
     if (Math.abs(diff) >= ms) return formatter.format(Math.round(diff / ms), unit);
   }
-  return formatter.format(0, 'minute');
+  // Dưới một phút: `Intl` dịch "0 phút" thành "phút này" / "this minute", đọc
+  // như lỗi hiển thị ngay sau khi vừa tải tệp lên. Dùng câu tự viết cho rõ.
+  // Lệch đồng hồ vài giây giữa server và máy khách cũng rơi vào đây, nên không
+  // tách riêng trường hợp tương lai.
+  return JUST_NOW[locale];
 }
+
+const JUST_NOW: Record<Locale, string> = {
+  vi: 'vài giây trước',
+  en: 'a few seconds ago',
+};
 
 /** Short absolute date, e.g. "02/07/2026" (vi) or "Jul 2, 2026" (en). */
 export function formatDate(isoDate: string, locale: Locale): string {
