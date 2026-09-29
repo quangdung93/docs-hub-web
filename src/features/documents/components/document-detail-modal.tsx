@@ -136,8 +136,6 @@ export function DocumentDetailModal({
                       <div className="text-muted-foreground mt-0.5 text-xs">
                         {formatRelativeTime(revision.uploadedAt, locale)} ·{' '}
                         {formatBytes(revision.sizeBytes)}
-                        {labelOf(revision.projectVersionId) &&
-                          ` · ${labelOf(revision.projectVersionId)}`}
                       </div>
                     </div>
                   </div>

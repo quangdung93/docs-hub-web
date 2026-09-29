@@ -7,7 +7,7 @@ import { formatRelativeTime } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/utils';
 import { Badge, ErrorState, FileTypeIcon, Skeleton } from '@/shared/ui';
 
-import { useDocuments, useVersionLabels } from '../hooks/use-documents';
+import { useDocuments } from '../hooks/use-documents';
 import { formatBytes } from '../services/upload-queue.service';
 
 import { DocumentDetailModal } from './document-detail-modal';
@@ -43,7 +43,6 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
     error,
     refetch,
   } = useDocuments(projectId, { includeDeleted: true });
-  const { labelOf } = useVersionLabels(projectId);
   const [openedId, setOpenedId] = useState<string | null>(null);
 
   const entries = useMemo(
@@ -123,7 +122,6 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
       <p className="text-muted-foreground text-xs">{t('history.hint')}</p>
 
       {entries.map((entry) => {
-        const versionLabel = labelOf(entry.projectVersionId);
         return (
           <button
             type="button"
@@ -171,7 +169,6 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
                       `sizeBytes` là 0 do mapper gán mặc định chứ không phải số
                       đo được. Hiện "0 B" sẽ là bịa ra một con số. */}
                   {!entry.isDeletion && ` · ${formatBytes(entry.sizeBytes)}`}
-                  {versionLabel && ` · ${versionLabel}`}
                 </div>
               </div>
             </div>

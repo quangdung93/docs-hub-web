@@ -24,7 +24,7 @@ import {
 } from '@/shared/ui';
 
 import { documentsApi } from '../api/documents.api';
-import { useDeleteDocument, useDocuments, useVersionLabels } from '../hooks/use-documents';
+import { useDeleteDocument, useDocuments } from '../hooks/use-documents';
 import {
   completenessDisplay,
   completenessPercent,
@@ -64,7 +64,6 @@ export function DocumentTable({
 }) {
   const { t, locale } = useI18n();
   const { data: documents, isPending, isError, error, refetch } = useDocuments(projectId);
-  const { labelOf } = useVersionLabels(projectId);
   const deleteDocument = useDeleteDocument(projectId);
 
   const [page, setPage] = useState(1);
@@ -200,7 +199,11 @@ export function DocumentTable({
                     re-upload) and the project version it was uploaded into. */}
                 <TableCell className="whitespace-nowrap">
                   <span className="inline-flex items-center gap-1.5">
-                    {document.revisionNo !== null && (
+                    {document.revisionNo === null ? (
+                      <span className="text-muted-foreground text-xs">
+                        {t('common.emptyValue')}
+                      </span>
+                    ) : (
                       <button
                         type="button"
                         onClick={() => setOpened({ id: document.id, tab: 'history' })}
@@ -211,9 +214,6 @@ export function DocumentTable({
                         </Badge>
                       </button>
                     )}
-                    <span className="text-muted-foreground text-xs">
-                      {labelOf(document.projectVersionId) || t('common.emptyValue')}
-                    </span>
                   </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">
