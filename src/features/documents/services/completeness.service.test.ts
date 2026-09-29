@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 
 import {
   completenessDisplay,
+  isAnalyzableDocType,
   completenessPercent,
   completenessTone,
   resolvedCount,
@@ -95,6 +96,19 @@ assert.equal(completenessPercent(summary.totalCases, summary.resolvedCases), 100
 // ── completenessDisplay: chỉ mời phân tích tài liệu đã xác nhận URD ────────
 // Đã xác nhận URD + đã lập chỉ mục → mời phân tích.
 assert.equal(completenessDisplay('indexed', null, 'urd'), 'analyze');
+// PRD đã xác nhận cũng phân tích được (Swagger 29/09/2026).
+assert.equal(completenessDisplay('indexed', null, 'prd'), 'analyze', 'PRD phải hiện nút');
+assert.equal(completenessDisplay('processing', null, 'prd'), 'empty');
+// Loại lạ backend có thể thêm sau này thì chưa mời phân tích, cho tới khi web hỗ trợ.
+assert.equal(completenessDisplay('indexed', null, 'brd'), 'empty');
+
+// isAnalyzableDocType: đúng hai giá trị backend nhận ở `PATCH /doc-type`.
+assert.equal(isAnalyzableDocType('urd'), true);
+assert.equal(isAnalyzableDocType('prd'), true);
+for (const value of ['', null, undefined, 'URD', 'brd', 'readme']) {
+  assert.equal(isAnalyzableDocType(value), false, `${String(value)} không phân tích được`);
+}
+
 // Chưa xác nhận URD thì không bao giờ hiện nút, dù đã lập chỉ mục — trước đây
 // bấm nút trên README.md là âm thầm gán nó thành URD.
 assert.equal(completenessDisplay('indexed', null, null), 'empty', 'README.md không được hiện nút');

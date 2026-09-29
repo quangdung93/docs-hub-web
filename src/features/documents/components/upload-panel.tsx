@@ -58,14 +58,21 @@ export function UploadPanel({
     isConfirmingUrd,
   } = useUploadQueue(projectId);
 
+  /** "URD" hoặc "PRD" — popup nói đúng loại backend vừa nhận diện. */
+  const promptType = urdPrompt?.docType.toUpperCase() ?? '';
+
   const urdDialog = (
     <ConfirmDialog
       open={urdPrompt !== null}
       variant="question"
-      title={t('upload.urdPrompt.title')}
-      description={t('upload.urdPrompt.description', { name: urdPrompt?.fileName ?? '' })}
-      confirmLabel={t('upload.urdPrompt.confirm')}
-      cancelLabel={t('upload.urdPrompt.reject')}
+      title={t('upload.urdPrompt.title', { type: promptType })}
+      description={t('upload.urdPrompt.description', {
+        name: urdPrompt?.fileName ?? '',
+        type: promptType,
+        full: urdPrompt ? t(`docType.${urdPrompt.docType}.full`) : '',
+      })}
+      confirmLabel={t('upload.urdPrompt.confirm', { type: promptType })}
+      cancelLabel={t('upload.urdPrompt.reject', { type: promptType })}
       onConfirm={() => void confirmUrdPrompt()}
       onCancel={dismissUrdPrompt}
       pending={isConfirmingUrd}

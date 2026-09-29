@@ -111,15 +111,27 @@ export function resolvedCount(cases: readonly EdgeCase[]): number {
  * Đã có kết quả thì luôn hiện, kể cả khi revision mới đang xử lý: số liệu biến
  * mất giữa chừng khó hiểu hơn là giữ lại bản cũ.
  */
+/**
+ * Loại tài liệu AI phân tích edge case được. Backend nhận diện lúc tải lên
+ * (`suggested_doc_type`) và nhận xác nhận qua `PATCH /doc-type` — thêm PRD từ
+ * Swagger 29/09/2026, kiểm chứng: PRD được gợi ý "prd", xác nhận và phân tích được.
+ */
+export const ANALYZABLE_DOC_TYPES = ['urd', 'prd'] as const;
+export type AnalyzableDocType = (typeof ANALYZABLE_DOC_TYPES)[number];
+
+export function isAnalyzableDocType(value: string | null | undefined): value is AnalyzableDocType {
+  return (ANALYZABLE_DOC_TYPES as readonly string[]).includes(value ?? '');
+}
+
 export function completenessDisplay(
   status: string,
   summary: UrdSummary | null,
   docType: string | null
 ): 'empty' | 'analyze' | 'progress' {
   if (summary) return 'progress';
-  // Chỉ tài liệu đã được xác nhận là URD mới mời phân tích. README hay file cấu
-  // hình không có edge case nghiệp vụ nào để tìm.
-  return status === 'indexed' && docType === 'urd' ? 'analyze' : 'empty';
+  // Chỉ tài liệu đã được xác nhận là URD/PRD mới mời phân tích. README hay file
+  // cấu hình không có edge case nghiệp vụ nào để tìm.
+  return status === 'indexed' && isAnalyzableDocType(docType) ? 'analyze' : 'empty';
 }
 
 /** Ngưỡng màu cho thanh tiến độ, dùng chung để bảng và modal không lệch nhau. */

@@ -7,6 +7,7 @@ import { queryKeys } from '@/core/api';
 import { AppError } from '@/core/api/errors';
 
 import { urdApi } from '../api/urd.api';
+import { type AnalyzableDocType, isAnalyzableDocType } from '../services/completeness.service';
 import { documentsApi } from '../api/documents.api';
 import { useCreateProjectVersion, useProjectVersions } from './use-documents';
 import {
@@ -26,11 +27,12 @@ import {
  * one explicitly; otherwise the newest **draft** version is used, since a
  * published version is frozen and the backend refuses writes to it.
  */
-/** Một tệp backend gợi ý là URD. `version` là bộ đếm optimistic-lock để gửi `doc-type`. */
+/** Một tệp backend gợi ý là URD/PRD. `version` là bộ đếm optimistic-lock để gửi `doc-type`. */
 export interface UrdPrompt {
   documentId: string;
   fileName: string;
   version: number;
+  docType: AnalyzableDocType;
 }
 
 export function useUploadQueue(projectId: string, projectVersionId?: string) {
@@ -99,10 +101,15 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
             // Backend đoán đây là URD mà tài liệu chưa được xác nhận: hỏi người
             // dùng. Không tự xác nhận — `doc_type` là quyết định của người dùng
             // (Swagger: "do người dùng xác nhận qua ConfirmDocType").
-            if (suggestedDocType === 'urd' && document.docType !== 'urd') {
+            if (isAnalyzableDocType(suggestedDocType) && document.docType !== suggestedDocType) {
               setUrdPrompts((current) => [
                 ...current,
-                { documentId: document.id, fileName: file.name, version: document.version },
+                {
+                  documentId: document.id,
+                  fileName: file.name,
+                  version: document.version,
+                  docType: suggestedDocType,
+                },
               ]);
             }
             // Upload finished; the server is now embedding — progress is unknowable,
@@ -141,7 +148,7 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
     if (!prompt) return;
     setIsConfirmingUrd(true);
     try {
-      await urdApi.confirmUrd(projectId, prompt.documentId, prompt.version);
+      await urdApi.confirmDocType(projectId, prompt.documentId, prompt.version, prompt.docType);
       void queryClient.invalidateQueries({ queryKey: queryKeys.documents.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.urd.summary(projectId) });
     } catch {

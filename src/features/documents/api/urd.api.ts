@@ -8,6 +8,7 @@ import {
   UrdSummaryListDtoSchema,
 } from './urd.dto';
 import {
+  type AnalyzableDocType,
   toAnalysis,
   toUrdSummary,
   type UrdAnalysis,
@@ -40,9 +41,21 @@ export const urdApi = {
    * chối. Mỗi lần gọi thành công làm nó tăng một bậc, nên nơi gọi phải dùng
    * `version` vừa đọc được chứ không giữ lại giá trị cũ.
    */
-  confirmUrd: async (projectId: string, documentId: string, version: number): Promise<void> => {
+  /**
+   * Xác nhận loại tài liệu (URD hoặc PRD).
+   *
+   * `version` là bộ đếm optimistic-locking của tài liệu; gửi sai thì backend từ
+   * chối. Mỗi lần gọi thành công làm nó tăng một bậc, nên nơi gọi phải dùng
+   * `version` vừa đọc được chứ không giữ lại giá trị cũ.
+   */
+  confirmDocType: async (
+    projectId: string,
+    documentId: string,
+    version: number,
+    docType: AnalyzableDocType
+  ): Promise<void> => {
     await http.patch(endpoints.documents.confirmDocType(projectId, documentId), {
-      doc_type: 'urd',
+      doc_type: docType,
       version,
     });
   },

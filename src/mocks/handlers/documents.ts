@@ -231,7 +231,11 @@ export const documentHandlers = [
         revision: toRevisionDto(document, projectId),
         // Backend thật nhận diện theo nội dung; mock đoán theo tên cho đủ để
         // popup "Phát hiện tài liệu URD" hiện được khi chạy dev.
-        suggested_doc_type: /urd|user[\s_-]*requirement/i.test(name) ? 'urd' : '',
+        suggested_doc_type: /urd|user[\s_-]*requirement/i.test(name)
+          ? 'urd'
+          : /prd|product[\s_-]*requirement/i.test(name)
+            ? 'prd'
+            : '',
       }),
       { status: 202 }
     );
