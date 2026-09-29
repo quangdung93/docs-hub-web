@@ -162,6 +162,8 @@ export function DocumentHistoryList({ projectId }: { projectId: string }) {
                   <div className="text-muted-foreground truncate text-xs">
                     <span className="text-muted-foreground font-normal">
                       {t('history.revision', { no: entry.revisionNo })}
+                      {entry.documentVersion &&
+                        ` · ${t('history.documentVersion', { version: entry.documentVersion })}`}
                     </span>
                   </div>
                 )}

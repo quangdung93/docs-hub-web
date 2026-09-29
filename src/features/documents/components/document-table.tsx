@@ -212,9 +212,11 @@ export function DocumentTable({
                       </button>
                     )}
                     <span className="text-muted-foreground text-xs">
-                      {document.documentVersion ||
-                        labelOf(document.projectVersionId) ||
-                        t('common.emptyValue')}
+                      {/* Có nhãn "Phiên bản" để không lẫn với "Bản N" ngay bên cạnh:
+                          "Bản" là số lần tải lên, còn đây là phiên bản người dùng nhập. */}
+                      {document.documentVersion
+                        ? t('history.documentVersion', { version: document.documentVersion })
+                        : labelOf(document.projectVersionId) || t('common.emptyValue')}
                     </span>
                   </span>
                 </TableCell>

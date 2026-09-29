@@ -130,6 +130,8 @@ export function DocumentDetailModal({
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium">
                           {t('history.revision', { no: revision.revisionNo })}
+                          {revision.documentVersion &&
+                            ` · ${t('history.documentVersion', { version: revision.documentVersion })}`}
                         </span>
                         {isCurrent && <Badge variant="indexed">{t('versions.current')}</Badge>}
                       </div>

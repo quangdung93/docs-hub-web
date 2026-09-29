@@ -316,6 +316,7 @@ export const vi = {
   'history.hint':
     'Toàn bộ các lần tải lên / thay thế tệp trong dự án, mới nhất trước.',
   'history.empty': 'Chưa có lần tải lên nào.',
+  'history.documentVersion': 'Phiên bản {version}',
   'history.revision': 'Bản {no}',
   'history.uploadedBy': 'Tải lên bởi {name}',
   'history.unknownUser': 'Không rõ',
@@ -328,10 +329,8 @@ export const vi = {
   'reports.menuTitle': 'Loại báo cáo',
   // Nhãn loại báo cáo, dùng ở màn lịch sử xuất (backend trả `report_type`).
   'reports.uat': 'UAT Report',
-  'reports.scope': 'Phạm vi dữ liệu',
   'reports.format': 'Định dạng xuất',
   'reports.export': 'Xuất file',
-  'reports.scopeAll': 'Toàn bộ dự án',
   'reports.uatAi': 'UAT Report · AI tổng hợp',
   'reports.uatAiHint': 'RAGFlow đọc tài liệu và viết test case',
   'reports.planning': 'Project Planning',

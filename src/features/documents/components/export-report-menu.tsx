@@ -12,10 +12,10 @@ import {
 } from 'lucide-react';
 
 import { useI18n } from '@/core/i18n';
-import { Button, Field, messageOf, Modal, Select, showErrorToast } from '@/shared/ui';
+import { Button, messageOf, Modal, showErrorToast } from '@/shared/ui';
 
 import { type ReportFormat, type ReportType } from '../api/documents.api';
-import { useGenerateReport, useProjectVersions } from '../hooks/use-documents';
+import { useGenerateReport } from '../hooks/use-documents';
 import { reportDownloadHref } from '../services/report.service';
 
 import { ReportHistoryModal } from './report-history-modal';
@@ -35,9 +35,6 @@ import { ReportHistoryModal } from './report-history-modal';
  */
 const REPORT_FORMATS = ['xlsx', 'pdf'] as const;
 
-/** Giá trị canh cho "không lọc theo phiên bản" — Select cần một chuỗi thật. */
-const ALL_VERSIONS = 'all';
-
 export function ExportReportMenu({ projectId }: { projectId: string }) {
   const { t } = useI18n();
 
@@ -45,10 +42,8 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [kind, setKind] = useState<ReportType | null>(null);
   const [format, setFormat] = useState<ReportFormat>('xlsx');
-  const [versionId, setVersionId] = useState<string>(ALL_VERSIONS);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data: versions } = useProjectVersions(projectId);
   const generateReport = useGenerateReport(projectId);
 
   // Đóng khi bấm ra ngoài hoặc nhấn Escape. Giới hạn trong container để một cú
@@ -69,11 +64,6 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
     };
   }, [menuOpen]);
 
-  const versionOptions = [
-    { value: ALL_VERSIONS, label: t('reports.scopeAll') },
-    ...(versions ?? []).map((version) => ({ value: version.id, label: version.label })),
-  ];
-
   const openDialog = (next: ReportType) => {
     setKind(next);
     setMenuOpen(false);
@@ -91,8 +81,8 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
     try {
       const result = await generateReport.mutateAsync({
         reportType,
+        // Luôn lấy toàn bộ dự án: ô "Phạm vi dữ liệu" đã bỏ vì không ai dùng tới.
         format,
-        projectVersionId: versionId === ALL_VERSIONS ? undefined : versionId,
       });
 
       const link = document.createElement('a');
@@ -197,17 +187,7 @@ export function ExportReportMenu({ projectId }: { projectId: string }) {
       >
         <p className="text-muted-foreground">{t('reports.generatingHint')}</p>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Field label={t('reports.scope')}>
-            <Select
-              value={versionId}
-              onValueChange={setVersionId}
-              options={versionOptions}
-              label={t('reports.scope')}
-              className="w-full"
-            />
-          </Field>
-
+        <div className="mt-4">
           <div>
             <p className="text-muted-foreground mb-1.5 text-sm font-medium">
               {t('reports.format')}

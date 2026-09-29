@@ -312,6 +312,7 @@ export const en: Record<MessageKey, string> = {
   'edgeCase.noCases': 'No unaddressed edge cases found. This document is complete.',
   'history.hint': 'Every upload and replacement in this project, newest first.',
   'history.empty': 'No uploads yet.',
+  'history.documentVersion': 'Version {version}',
   'history.revision': 'Rev {no}',
   'history.uploadedBy': 'Uploaded by {name}',
   'history.unknownUser': 'Unknown',
@@ -325,10 +326,8 @@ export const en: Record<MessageKey, string> = {
   // Report-type label, used by the export history (the backend sends
   // `report_type`).
   'reports.uat': 'UAT Report',
-  'reports.scope': 'Data scope',
   'reports.format': 'Export format',
   'reports.export': 'Export file',
-  'reports.scopeAll': 'Whole project',
   'reports.uatAi': 'UAT Report · AI-written',
   'reports.uatAiHint': 'RAGFlow reads the documents and writes test cases',
   'reports.planning': 'Project Planning',
