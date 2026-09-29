@@ -20,13 +20,10 @@ export function Field({
   htmlFor,
   error,
   hint,
-  required,
   className,
   children,
 }: {
   label?: string;
-  /** Hiện dấu * cạnh nhãn. Chỉ là tín hiệu thị giác — ô nhập tự đặt `required`. */
-  required?: boolean;
   htmlFor?: string;
   error?: string;
   hint?: React.ReactNode;
@@ -40,11 +37,6 @@ export function Field({
           {label && (
             <label htmlFor={htmlFor} className="block text-sm font-medium">
               {label}
-              {required && (
-                <span className="text-destructive ml-0.5" aria-hidden>
-                  *
-                </span>
-              )}
             </label>
           )}
           {hint}

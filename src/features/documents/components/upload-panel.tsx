@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 import { useI18n } from '@/core/i18n';
-import { ConfirmDialog, Dropzone, Field, Input } from '@/shared/ui';
+import { ConfirmDialog, Dropzone } from '@/shared/ui';
 
 import { useUploadQueue } from '../hooks/use-upload-queue';
 import { ACCEPT_ATTRIBUTE } from '../schemas/document.schema';
@@ -21,7 +21,7 @@ export function UploadPanel({
   layout = 'split',
   initialVersion = false,
   onVersionChange,
-  customDocumentVersion = false,
+  autoProjectVersion = false,
 }: {
   projectId: string;
   layout?: 'split' | 'stacked';
@@ -33,8 +33,11 @@ export function UploadPanel({
    * hook, đi khỏi trang là mất.
    */
   onVersionChange?: (versionId: string | undefined) => void;
-  /** Show the free-text revision version used by the document upload screen. */
-  customDocumentVersion?: boolean;
+  /**
+   * Màn tải tài liệu: tệp tự vào phiên bản nháp mới nhất, không hiện ô chọn.
+   * Ô chọn chỉ hiện khi dự án chưa có phiên bản nào — không có thì không tải được.
+   */
+  autoProjectVersion?: boolean;
 }) {
   const { t } = useI18n();
   const {
@@ -49,8 +52,6 @@ export function UploadPanel({
     addVersion,
     isAddingVersion,
     canUpload,
-    documentVersion,
-    setDocumentVersion,
     urdPrompt,
     confirmUrdPrompt,
     dismissUrdPrompt,
@@ -76,35 +77,16 @@ export function UploadPanel({
     onVersionChange?.(targetVersionId);
   }, [targetVersionId, onVersionChange]);
 
-  // Phiên bản tài liệu là bắt buộc ở màn tải tài liệu: chưa nhập thì chưa cho
-  // thả file. Chặn ở dropzone chứ không đợi từng dòng hỏng sau khi đã vào hàng
-  // đợi — báo lúc đó là quá muộn, và trông như lỗi hệ thống chứ không phải thiếu
-  // thông tin. Phạm vi phiên bản project vẫn là chuyện riêng, độc lập với nhãn này.
-  const needsDocumentVersion = customDocumentVersion && !documentVersion.trim();
-
-  const versionPicker = customDocumentVersion ? (
-    <>
-      <Field label={t('upload.documentVersion')} htmlFor="document-version" required>
-        <Input
-          id="document-version"
-          value={documentVersion}
-          onChange={(event) => setDocumentVersion(event.target.value)}
-          maxLength={255}
-          required
-          aria-required
-          placeholder={t('upload.documentVersionPlaceholder')}
-        />
-      </Field>
-      {!draftVersions.length && (
-        <VersionPicker
-          versions={draftVersions}
-          value={targetVersionId}
-          onChange={selectVersion}
-          onCreate={addVersion}
-          isCreating={isAddingVersion}
-        />
-      )}
-    </>
+  const versionPicker = autoProjectVersion ? (
+    !draftVersions.length && (
+      <VersionPicker
+        versions={draftVersions}
+        value={targetVersionId}
+        onChange={selectVersion}
+        onCreate={addVersion}
+        isCreating={isAddingVersion}
+      />
+    )
   ) : (
     <VersionPicker
       versions={draftVersions}
@@ -129,12 +111,8 @@ export function UploadPanel({
       // scope is required — but failing a row after the file is already in the
       // queue tells the user too late, and reads as a bug rather than a
       // missing input.
-      disabled={!canUpload || needsDocumentVersion}
-      // Thiếu phiên bản project thì báo cái đó trước: đó là thứ người dùng không
-      // tự gõ được ở đây, phải tạo phiên bản mới.
-      disabledHint={
-        !canUpload ? t('upload.dropzone.needVersion') : t('upload.dropzone.needDocumentVersion')
-      }
+      disabled={!canUpload}
+      disabledHint={t('upload.dropzone.needVersion')}
       className={layout === 'split' ? 'min-h-[280px]' : 'min-h-[220px]'}
     />
   );

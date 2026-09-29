@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Users } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import Link from 'next/link';
 
 import { useI18n } from '@/core/i18n';
@@ -34,10 +34,6 @@ export function ProjectCard({ project }: { project: Project }) {
         <span className="flex items-center gap-1">
           <FileText className="size-3.5" aria-hidden />
           {t('projects.documentCount', { count: orUnknown(project.documentCount) })}
-        </span>
-        <span className="flex items-center gap-1">
-          <Users className="size-3.5" aria-hidden />
-          {t('projects.memberCount', { count: orUnknown(project.memberCount) })}
         </span>
       </div>
     </Link>

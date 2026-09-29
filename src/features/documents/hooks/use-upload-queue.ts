@@ -36,7 +36,6 @@ export interface UrdPrompt {
 export function useUploadQueue(projectId: string, projectVersionId?: string) {
   const queryClient = useQueryClient();
   const [items, setItems] = useState<UploadItem[]>([]);
-  const [documentVersion, setDocumentVersion] = useState('');
   /** Tệp backend gợi ý là URD, đang chờ người dùng xác nhận — hỏi lần lượt. */
   const [urdPrompts, setUrdPrompts] = useState<UrdPrompt[]>([]);
   const [isConfirmingUrd, setIsConfirmingUrd] = useState(false);
@@ -93,7 +92,6 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
         documentsApi
           .upload(projectId, file, {
             projectVersionId: targetVersionId,
-            documentVersion,
             title: file.name,
             onProgress: (percent) => patch(item.id, { progress: percent }),
           })
@@ -128,7 +126,7 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
           });
       }
     },
-    [documentVersion, patch, projectId, queryClient, targetVersionId]
+    [patch, projectId, queryClient, targetVersionId]
   );
 
   /** Bỏ câu hỏi đang hiện, chuyển sang tệp kế tiếp. "Không phải URD" chỉ là bỏ qua. */
@@ -194,8 +192,6 @@ export function useUploadQueue(projectId: string, projectVersionId?: string) {
     /** Draft versions an upload can target, newest first. */
     draftVersions,
     targetVersionId,
-    documentVersion,
-    setDocumentVersion,
     /** Tệp đang được hỏi "có phải URD không", hoặc null. */
     urdPrompt: urdPrompts[0] ?? null,
     confirmUrdPrompt,

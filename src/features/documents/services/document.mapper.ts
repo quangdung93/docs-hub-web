@@ -80,7 +80,6 @@ export function toHistory(revisions?: readonly RevisionDto[] | null): RevisionEn
       sizeBytes: revision.size_bytes,
       status: toDocumentStatus(revision),
       projectVersionId: revision.scope?.project_version_id ?? null,
-      documentVersion: revision.document_version ?? null,
       uploadedBy: revision.created_by ?? null,
       uploadedAt: revision.created_at,
     }));
@@ -112,7 +111,6 @@ export function toDocument(dto: DocumentDto, revisions?: readonly RevisionDto[] 
     version: dto.version,
     docType: dto.doc_type ?? null,
     projectVersionId: revision?.scope?.project_version_id ?? null,
-    documentVersion: revision?.document_version ?? null,
     isDeleted: dto.is_deleted ?? false,
     deletedAt: dto.deleted_at ?? null,
     history: toHistory(revisions),

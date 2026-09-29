@@ -39,7 +39,7 @@ export function UploadScreen({ projectId }: { projectId: string }) {
         <UploadPanel
           projectId={projectId}
           onVersionChange={handleVersionChange}
-          customDocumentVersion
+          autoProjectVersion
         />
       </CardBody>
 
