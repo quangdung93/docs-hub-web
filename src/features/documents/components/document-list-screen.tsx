@@ -54,6 +54,15 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
   const [createOpen, setCreateOpen] = useState(false);
   const createVersion = useCreateProjectVersion(projectId);
 
+  /**
+   * Về phiên bản mới nhất. Gỡ luôn `?version=` khỏi URL: để lại thì tải lại
+   * trang sẽ kéo người dùng về đúng phiên bản cũ họ vừa rời đi.
+   */
+  const followLatest = () => {
+    setViewingVersion(null);
+    if (versionParam) router.replace(projectRoutes.documents(projectId));
+  };
+
   const formatOptions = [
     { value: 'all' as const, label: t('documents.filter.allFormats') },
     ...DOCUMENT_FORMAT_VALUES.map((value) => ({
@@ -134,7 +143,7 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
             <History className="size-4 shrink-0" aria-hidden />
             {t('versions.readOnlyBanner', { label: viewedLabel ?? '' })}
           </span>
-          <Button variant="outline" size="sm" onClick={() => setViewingVersion(null)}>
+          <Button variant="outline" size="sm" onClick={followLatest}>
             {t('versions.backToLatest')}
           </Button>
         </div>
@@ -203,7 +212,15 @@ export function DocumentListScreen({ projectId }: { projectId: string }) {
       <CreateVersionModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreate={(label, note) => createVersion.mutateAsync({ label, note })}
+        onCreate={async (label, note) => {
+          const created = await createVersion.mutateAsync({ label, note });
+          // Tạo xong thì chuyển sang phiên bản mới — nó thành bản mới nhất, nơi
+          // duy nhất tải tài liệu lên được. Dùng null ("theo bản mới nhất") chứ
+          // không gán id vừa tạo: danh sách phiên bản còn đang tải lại, gán id
+          // lúc này thì banner "chỉ đọc" chớp lên một nhịp.
+          followLatest();
+          return created;
+        }}
         isPending={createVersion.isPending}
       />
     </main>
